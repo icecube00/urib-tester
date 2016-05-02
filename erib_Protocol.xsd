@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2010 (http://www.altova.com) by TEST (HOME) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:element name="root">
+		<xs:annotation>
+			<xs:documentation>Корневой элемент</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="settings">
+					<xs:annotation>
+						<xs:documentation>Настройки подключения к ЕРИБ</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element ref="operation" maxOccurs="unbounded">
+					<xs:annotation>
+						<xs:documentation>Набор запросов atmAPI</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:sequence>
+			<xs:attribute name="specification" type="xs:string" use="required">
+				<xs:annotation>
+					<xs:documentation>Версия спецификации ЕРИБ</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="settings">
+		<xs:annotation>
+			<xs:documentation>Настройки подключения к ЕРИБ</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="params" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="request">
+		<xs:annotation>
+			<xs:documentation>Блок описания запроса</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="action">
+					<xs:annotation>
+						<xs:documentation>Блок запроса</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:sequence>
+			<xs:attribute name="name" type="xs:string" use="required">
+				<xs:annotation>
+					<xs:documentation>Название запроса (из спеки)</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="id" type="xs:string" use="required">
+				<xs:annotation>
+					<xs:documentation>Номер запроса (уникальный [по возможности из спеки])</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="service" type="xs:string" use="optional">
+				<xs:annotation>
+					<xs:documentation>Ключ сервиса оказываемой услуги [используется для раграничения прав доступа] (см. таблицу 3.3 в спеке)</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="requireUDBO" use="optional">
+				<xs:annotation>
+					<xs:documentation>Признак необходимости запроса УДБО (см. таблицу 3.3 в спеке)</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:enumeration value="true"/>
+						<xs:enumeration value="false"/>
+						<xs:enumeration value="optional"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="params">
+		<xs:annotation>
+			<xs:documentation>Блок набора парамтеров запроса</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="param" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="param">
+		<xs:annotation>
+			<xs:documentation>Параметр запроса</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:choice minOccurs="0">
+				<xs:element ref="choice" maxOccurs="unbounded">
+					<xs:annotation>
+						<xs:documentation>Группа зависимых параметров [Для парметров типа choice]</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element ref="list">
+					<xs:annotation>
+						<xs:documentation>Фиксированный список допустимых значений [Для параметров типа - list или show]</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:choice>
+			<xs:attribute name="text" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Текстовое описание парметра</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="name" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Название параметра</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="value" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Значение по-умолчанию</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="required" type="xs:boolean">
+				<xs:annotation>
+					<xs:documentation>Признак обязательности параметра</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="type" use="required">
+				<xs:annotation>
+					<xs:documentation>Тип параметра</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:enumeration value="bool">
+							<xs:annotation>
+								<xs:documentation>Булевый параметр. При значении false обычно не отправляется.</xs:documentation>
+							</xs:annotation>
+						</xs:enumeration>
+						<xs:enumeration value="choice">
+							<xs:annotation>
+								<xs:documentation>Группа зависимых параметров. Одновременно используется только одна такая группа.</xs:documentation>
+							</xs:annotation>
+						</xs:enumeration>
+						<xs:enumeration value="list">
+							<xs:annotation>
+								<xs:documentation>Набор допустимых значений</xs:documentation>
+							</xs:annotation>
+						</xs:enumeration>
+						<xs:enumeration value="read">
+							<xs:annotation>
+								<xs:documentation>Не изменяемый параметр [обычно обязательный]</xs:documentation>
+							</xs:annotation>
+						</xs:enumeration>
+						<xs:enumeration value="show">
+							<xs:annotation>
+								<xs:documentation>Набор placeholder'ов</xs:documentation>
+							</xs:annotation>
+						</xs:enumeration>
+						<xs:enumeration value="text">
+							<xs:annotation>
+								<xs:documentation>Простое текстовое поле</xs:documentation>
+							</xs:annotation>
+						</xs:enumeration>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="option">
+		<xs:annotation>
+			<xs:documentation>Фиксированное значение параметра</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="xs:string">
+					<xs:attribute name="value" type="xs:string" use="required">
+						<xs:annotation>
+							<xs:documentation>Значение</xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
+					<xs:attribute name="name" type="xs:string">
+						<xs:annotation>
+							<xs:documentation>Идентификатор зависимого запроса</xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
+					<xs:attribute name="fill" type="xs:boolean">
+						<xs:annotation>
+							<xs:documentation>Признак основного запроса. При успешном выполнении запроса с идентификтором "name" заполняется данный placeholder</xs:documentation>
+						</xs:annotation>
+					</xs:attribute>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="operation">
+		<xs:annotation>
+			<xs:documentation>Набор запросов</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="request" minOccurs="0" maxOccurs="unbounded">
+					<xs:annotation>
+						<xs:documentation>Описание запроса</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element ref="operation" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="name" type="xs:string" use="required">
+				<xs:annotation>
+					<xs:documentation>Название набора запросов (из спеки)</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="id" type="xs:string" use="required">
+				<xs:annotation>
+					<xs:documentation>Номер набора запросов (уникальный [по возможности из спеки])</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="list">
+		<xs:annotation>
+			<xs:documentation>Набор допустимых значений</xs:documentation>
+		</xs:annotation>
+		<xs:complexType mixed="true">
+			<xs:sequence>
+				<xs:element ref="option" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="choice">
+		<xs:annotation>
+			<xs:documentation>Группа зависимых параметров</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="param" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="action">
+		<xs:annotation>
+			<xs:documentation>Запрос</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="params">
+					<xs:annotation>
+						<xs:documentation>Блок параметров запроса</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:sequence>
+			<xs:attribute name="url" type="xs:anyURI" use="required">
+				<xs:annotation>
+					<xs:documentation>Адрес, по которому происходит запрос. Значение "psi-address" - заменяется на выбранный из выпадающего списка адрес стенда ЕРИБ.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="name" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Название запроса (сейчас они живут в "eribOperations.js", но надо перенести в XML)</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="method" use="required">
+				<xs:annotation>
+					<xs:documentation>Используемый при запросе метод [post|get]</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:enumeration value="post"/>
+						<xs:enumeration value="get"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

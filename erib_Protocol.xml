@@ -1,0 +1,2254 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<!--
+root:	Корневой элемент
+	@specification:	Номер спецификации ЕРИБ
+	operation:	Набор запросов
+		@name:	Название набора запросов (из спеки)
+		@id:	Номер набора запросов (уникальный [по возможности из спеки])
+		request: Блок описания запроса.
+			@name:	Название запроса (из спеки)
+			@id:	Номер запроса (уникальный [по возможности из спеки])
+			@requireUDBO:	Признак необходимости запроса УДБО (см. таблицу 3.3 в спеке)
+			@service:	Ключ сервиса оказываемой услуги [используется для раграничения прав доступа] (см. таблицу 3.3 в спеке)
+			action: Запрос
+				@url:	Адрес, по которому происходит запрос. Значение "psi-address" - заменяется на выбранный из выпадающего списка адрес стенда ЕРИБ.
+				@method:	используемый при запросе метод [post|get]
+				@name:	Название запроса (сейчас они живут в "eribOperations.js", но надо перенести в XML)
+				params:	Набор парамтеров запроса.
+					param: Параметр запроса.
+						@text:	Текстовое описание парметра
+						@name:	Название параметра
+						@value:	Значение по-умолчанию
+						@required:	Признак обязательности параметра
+						@type:	Тип параметра.
+							list:	Набор допустимых значений
+								option:	Фиксированное значение параметра
+									@value:	Значение
+									@name:	Идентификатор зависимого запроса 
+									@fill:	Признак основного запроса. При успешном выполнении запроса с идентификтором "name" заполняется данный placeholder
+							choice:	Группа зависимых параметров
+-->
+<root specification="9.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="erib_Protocol.xsd">
+	<settings>
+		<params>
+			<param name="showAlerts" text="Debug" type="bool" required="true" value="true"/>
+			<param name="alertLevel" type="text" value="0"  required="true" text="Error"/>
+			<param name="showCatchedErr" type="bool" text="Выводить все ошибки" required="true" value="true"/>
+		</params>
+		<params>
+			<param name="timeOut" text="Время ожидания ответа сервера в секундах" type="text" value="120" required="true" />
+			<param name="forEmulator" type="bool" text="Формат эмулятора" required="true" value="true"/>
+		</params>
+		<params>
+			<param type="choice">
+				<choice>
+					<param type="text" required="false" name="psiAddr" value="" text="Адрес сервера ЕРИБ [вручную]."/>
+				</choice>
+				<choice>
+					<param name="psiAddr" type="list" text="Адрес сервера ЕРИБ" required="false" >
+						<list>
+							<option value="10.68.214.81:9080">CSA ИФТ</option>
+							<option value="10.117.0.12:5577">CSA HF</option>
+							<option value="10.68.5.237:9082">CSA ПСИ</option>
+							<option value="10.80.238.24:8080/Emulator">Эмулятор ЕРИБ</option>
+							<option value="10.67.5.219:9080">HotFix (1-й блок)</option>
+							<option value="tv-erib-8r2-03:9080">HotFix (2-й блок)</option>
+							<option value="10.68.5.238:9081">ПСИ (1-й блок|2-я нода)</option>
+							<option value="10.68.5.238:9080">ПСИ (2-й блок|2-я нода)</option>
+							<option value="10.68.214.82:9080">ИФТ (Одноблочный логон)</option>
+						</list>
+					</param>
+				</choice>
+			</param>
+		</params>
+		<params>
+			<param name="useStatus" value="true" text="Использовать карты из ERIB-Status" type="bool" required="true" />
+			<param name="mobileBank" value="true" text="МБ"  type="bool"  required="true"/>
+			<param name="way4" value="true" text="Way 4"  type="bool" required="true"/>
+			<param name="equalPan" value="true" text="PAN совпадает" type="bool"  required="true"/>
+			<param name="chooseAgreement" value="true" text="Выбор договора" type="bool" required="true" />
+			<param name="bankOffer" value="true" text="Предложения от банка" type="bool"  required="true"/>
+		</params>
+	</settings>
+	<operation name="Аутентификация" id="4.1">
+		<request name="Вход. Вариант для одноблочной архитектуры ЕРИБ." id="4.1.1" requireUDBO="false">
+			<action url="http://psi-address/atm/login.do" method="post" name="logon">
+				<params>
+					<param text="Операция" name="operation" value="login" type="read" required="true"/>
+					<param text="Номер карты пользователя, по которой произведена аутентификация" name="pan" value="" type="text" required="true"/>
+					<param text="Номер устройства самообслуживания, с которого осуществляется вход." name="codeATM" value="100000" type="text" required="true"/>
+					<param text="Признак карты с чипом." name="isChipCard" value="true" type="bool" required="false"/>
+					<param text="ОКАТО региона (5 цифр)" name="atmRegionCode" type="list" required="false">
+						<list>
+							<option value="45000">г. Москва</option>
+							<option value="mosobl">Московская область (корявка)</option>
+							<option value="46000">Московская область г Москва</option>
+							<option value="70000">Тульская обл., г.Алексин</option>
+							<option value="70202">Тульская обл., г.Алексин</option>
+							<option value="03000">Краснодарский край, г.Анапа</option>
+							<option value="03403">Краснодарский край, Анапский район, г.Анапа</option>
+							<option value="47000">Мурманская обл., г.Апатиты</option>
+							<option value="47405">Мурманская обл., г.Апатиты ул.Ленина д.24</option>
+							<option value="04000">Красноярский край, г.Ачинск</option>
+							<option value="04403">Красноярский край, г.Ачинск ул.Дружбы Народов</option>
+							<option value="10000">Амурская область, г.Благовещенск</option>
+							<option value="10401">Амурская область, г.Благовещенск ул.Строителей</option>
+							<option value="90000">Северная Осетия, г.Владикавказ</option>
+							<option value="90401">Северная Осетия, г.Владикавказ ул.Коцоева</option>
+						</list>
+					</param>
+				</params>
+			</action>
+		</request>
+		<request name="Вход. Вариант для многоблочной архитектуры ЕРИБ." id="4.1.2" requireUDBO="false">
+			<action url="http://psi-address/CSAATM/login.do" method="post" name="multylogon.stage1">
+				<params>
+					<param type="text" required="true" name="pan" value="" text="Номер карты пользователя, по которой произведена аутентификация"/>
+				</params>
+			</action>
+		</request>
+		<request name="Аутентификация по токену в указанном блоке." id="4.1.3" requireUDBO="false">
+			<action url="http://psi-address/atm/postCSALogin.do" method="post" name="multylogon.stage2">
+				<params>
+					<param type="text" required="true" name="token" value="" text="Токен аутентификации"/>
+					<param type="text" required="true" name="codeATM" value="100000" text="Номер устройства самообслуживания, с которого осуществляется вход."/>
+					<param type="bool" required="false" name="isChipCard" value="true" text="Признак карты с чипом."/>
+					<param type="list" required="false" name="atmRegionCode" text="ОКАТО региона (5 цифр)">
+						<list>
+							<option value="45000">г. Москва</option>
+							<option value="mosobl">Московская область (корявка)</option>
+							<option value="46000">Московская область г Москва</option>
+							<option value="70000">Тульская обл., г.Алексин</option>
+							<option value="70202">Тульская обл., г.Алексин</option>
+							<option value="03000">Краснодарский край, г.Анапа</option>
+							<option value="03403">Краснодарский край, Анапский район, г.Анапа</option>
+							<option value="47000">Мурманская обл., г.Апатиты</option>
+							<option value="47405">Мурманская обл., г.Апатиты ул.Ленина д.24</option>
+							<option value="04000">Красноярский край, г.Ачинск</option>
+							<option value="04403">Красноярский край, г.Ачинск ул.Дружбы Народов</option>
+							<option value="10000">Амурская область, г.Благовещенск</option>
+							<option value="10401">Амурская область, г.Благовещенск ул.Строителей</option>
+							<option value="90000">Северная Осетия, г.Владикавказ</option>
+							<option value="90401">Северная Осетия, г.Владикавказ ул.Коцоева</option>
+						</list>
+					</param>
+				</params>
+			</action>
+		</request>
+		<request name="Шаг выбора договора." id="4.1.4" requireUDBO="false">
+			<action url="http://psi-address/atm/login/chooseAgreement.do" method="post" name="chooseAgreement">
+				<params>
+					<param type="read" required="true" name="operation" value="choose" text="Операция"/>
+					<param type="text" required="true" name="agreementId" value="" text="Идентификатор выбранного договора."/>
+				</params>
+			</action>
+		</request>
+		<request name="Проверка реквизитов ДУЛ для дополнительной авторизации." id="4.1.5" requireUDBO="false">
+			<action url="http://psi-address/atm/checkDUL.do" method="post" name="checkDUL">
+				<params>
+					<param type="text" required="true" name="code" value="" text="Последние 4 цифры документа."/>
+				</params>
+			</action>
+		</request>
+		<request name="Выход." id="4.1.6" requireUDBO="false">
+			<action url="http://psi-address/atm/logoff.do" method="post" name="logoff">
+				<params/>
+			</action>
+		</request>
+	</operation>
+	<operation name="Получение списка банковских продуктов" id="4.2">
+		<request name="Получение списка банковских продуктов" id="4.2.0" service="Products" requireUDBO="optional">
+			<action url="http://psi-address/atm/private/products/list.do" method="post" name="productsList">
+				<params>
+					<param type="bool" required="false" name="showProductType" value="cards" text="Карта."/>
+					<param type="bool" required="false" name="showProductType" value="accounts" text="Вклад/счет."/>
+					<param type="bool" required="false" name="showProductType" value="loans" text="Кредит."/>
+					<param type="bool" required="false" name="showProductType" value="imaccounts" text="ОМС."/>
+				</params>
+			</action>
+		</request>
+		<request name="Получение списка банковских продуктов (вариант 2)." id="4.2.1" service="Products" requireUDBO="optional">
+			<action url="http://psi-address/atm/private/products/newList.do" method="post" name="productsNewList">
+				<params>
+					<param type="bool" required="false" name="showProductType" value="cards" text="Карта."/>
+					<param type="bool" required="false" name="showProductType" value="accounts" text="Вклад/счет."/>
+					<param type="bool" required="false" name="showProductType" value="loans" text="Кредит."/>
+					<param type="bool" required="false" name="showProductType" value="imaccounts" text="ОМС."/>
+				</params>
+			</action>
+		</request>
+	</operation>
+	<operation name="Информация по карте." id="4.3">
+		<request name="Детальная информация по карте." id="4.3.1" service="CardInfo" requireUDBO="false">
+			<action url="http://psi-address/atm/private/cards/info.do" method="post" name="cardsInfo">
+				<params>
+					<param type="text" required="true" name="id" value="" text="Id карты."/>
+				</params>
+			</action>
+		</request>
+		<request name="Выписка по карте." id="4.3.2" service="CardAbstract" requireUDBO="false">
+			<action url="http://psi-address/atm/private/cards/abstract.do" method="post">
+				<params>
+					<param type="text" required="true" name="id" value="" text="Id карты."/>
+					<param type="choice">
+						<choice>
+							<param type="text" required="false" name="from" value="" text="Дата начала выписки."/>
+							<param type="text" required="false" name="to" value="" text="Дата окончания выписки."/>
+						</choice>
+						<choice>
+							<param type="text" required="false" name="count" value="" text="Количество последних операций по выписке, необходимых отразить. Значение не может превышать 10."/>
+						</choice>
+					</param>
+					<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+					<param type="text" required="false" name="paginationOffset" value="" text="Смещение относительно начала выборки [страниц]."/>
+				</params>
+			</action>
+		</request>
+		<request name="Получение реквизитов счета карты." id="4.3.3" service="AccountBankDetails" requireUDBO="false">
+			<action url="http://psi-address/atm/private/cards/bankdetails.do" method="post">
+				<params>
+					<param type="text" required="true" name="id" value="" text="Id карты."/>
+				</params>
+			</action>
+		</request>
+	</operation>
+	<operation name="Информация по вкладу." id="4.4">
+		<request name="Детальная информация по вкладу." id="4.4.1" service="AccountInfo" requireUDBO="true">
+			<action url="http://psi-address/atm/private/accounts/info.do" method="post">
+				<params>
+					<param type="text" required="true" name="id" value="" text="Id вклада."/>
+				</params>
+			</action>
+		</request>
+		<request name="Выписка по Вкладу." id="4.4.2" service="AccountAbstract" requireUDBO="true">
+			<action url="http://psi-address/atm/private/accounts/abstract.do" method="post">
+				<params>
+					<param type="text" required="true" name="id" value="" text="Id вклада."/>
+					<param type="choice">
+						<choice>
+							<param type="text" required="false" name="from" value="" text="Дата начала выписки."/>
+							<param type="text" required="false" name="to" value="" text="Дата окончания выписки."/>
+						</choice>
+						<choice>
+							<param type="text" required="false" name="count" value="" text="Количество последних операций по выписке, необходимых отразить. Значение не может превышать 10."/>
+						</choice>
+					</param>
+					<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+					<param type="text" required="false" name="paginationOffset" value="" text="Смещение относительно начала выборки [страниц]."/>
+				</params>
+			</action>
+		</request>
+		<request name="Получение реквизитов вклада." id="4.4.3" service="AccountBankDetails" requireUDBO="false">
+			<action url="http://psi-address/atm/private/accounts/bankdetails.do" method="post">
+				<params>
+					<param type="text" required="true" name="id" value="" text="Id вклада"/>
+				</params>
+			</action>
+		</request>
+	</operation>
+	<operation name="Информация по кредиту." id="4.5">
+		<request name="Детальная информация по кредиту." id="4.5.1" service="LoanInfo" requireUDBO="true">
+			<action url="http://psi-address/atm/private/loans/info.do" method="post">
+				<params>
+					<param type="text" required="true" name="id" value="" text="Id кредита."/>
+				</params>
+			</action>
+		</request>
+		<request name="Кредитный график" id="4.5.2" service="LoanAbstract" requireUDBO="true">
+			<action url="http://psi-address/atm/private/loans/abstract.do" method="post">
+				<params>
+					<param type="text" required="true" name="id" value="" text="Id кредита."/>
+					<param type="choice">
+						<choice>
+							<param type="text" required="false" name="from" value="" text="Дата начала выписки."/>
+							<param type="text" required="false" name="to" value="" text="Дата окончания выписки."/>
+						</choice>
+						<choice>
+							<param type="text" required="false" name="count" value="" text="Количество последних операций по выписке, необходимых отразить. Значение не может превышать 10."/>
+						</choice>
+					</param>
+					<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+					<param type="text" required="false" name="paginationOffset" value="" text="Смещение относительно начала выборки [страниц]."/>
+				</params>
+			</action>
+		</request>
+	</operation>
+	<operation name="Информация по ОМС." id="4.6">
+		<request name="Выписка по ОМС." id="4.6.1" service="IMAccountAbstract" requireUDBO="true">
+			<action url="http://psi-address/atm/private/ima/abstract.do" method="post">
+				<params>
+					<param type="text" required="true" name="id" value="" text="Id металлического счета."/>
+				</params>
+			</action>
+		</request>
+	</operation>
+	<operation name="Информация по автоплатежам." id="4.7">
+		<request name="Список доступных автоплатежей." id="4.7.1" service="RegularPayments" requireUDBO="false">
+			<action url="http://psi-address/atm/private/regularpayments/list.do" method="post">
+				<params>
+					<param type="bool" required="false" name="type" value="longOffer" text="longOffer."/>
+					<param type="bool" required="false" name="type" value="autoPayment" text="autoPayment."/>
+					<param type="bool" required="false" name="type" value="autoSubscription" text="autoSubscription."/>
+					<param type="bool" required="false" name="type" value="autoTransfer" text="autoTransfer."/>
+				</params>
+			</action>
+		</request>
+		<operation name="Автоплатежи autoPayment." id="4.7.2">
+			<request name="Детальная информация по автоплатежу." id="4.7.2.1" service="AutoPaymentInfo" requireUDBO="false">
+				<action url="http://psi-address/atm/private/autopayments/info.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Id автоплатежа."/>
+					</params>
+				</action>
+			</request>
+			<request name="График исполнения автоплатежа." id="4.7.2.2" service="AutoPaymentInfo" requireUDBO="false">
+				<action url="http://psi-address/atm/private/autopayments/abstract.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Id автоплатежа."/>
+						<param type="choice">
+							<choice>
+								<param type="text" required="false" name="from" value="" text="Дата начала выписки."/>
+								<param type="text" required="false" name="to" value="" text="Дата окончания выписки."/>
+							</choice>
+						</param>
+						<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+						<param type="text" required="false" name="paginationOffset" value="" text="Смещение относительно начала выборки [страниц]."/>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Автоплатежи longOffer." id="4.7.3">
+			<request name="Детальная информация по автоплатежу." id="4.7.3.1" service="LongOfferInfo" requireUDBO="false">
+				<action url="http://psi-address/atm/private/longoffers/info.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Id автоплатежа"/>
+					</params>
+				</action>
+			</request>
+			<request name="График исполнения автоплатежа." id="4.7.3.2" service="LongOfferInfo" requireUDBO="false">
+				<action url="http://psi-address/atm/private/longoffers/abstract.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Id автоплатежа"/>
+						<param type="choice">
+							<choice>
+								<param type="text" required="false" name="from" value="" text="Дата начала построения графика."/>
+								<param type="text" required="false" name="to" value="" text="Дата окончания построения графика."/>
+							</choice>
+						</param>
+						<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+						<param type="text" required="false" name="paginationOffset" value="" text="Смещение относительно начала выборки."/>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Автоплатежи autoSubscription." id="4.7.4">
+			<request name="Детальная информация по автоплатежу." id="4.7.4.1" service="AutoSubscriptionInfo" requireUDBO="false">
+				<action url="http://psi-address/atm/private/autosubscriptions/info.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Id автоплатежа"/>
+					</params>
+				</action>
+			</request>
+			<request name="График исполнения автоплатежа." id="4.7.4.2" service="AutoSubscriptionInfo" requireUDBO="false">
+				<action url="http://psi-address/atm/private/autosubscriptions/abstract.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Id автоплатежа"/>
+						<param type="choice">
+							<choice>
+								<param type="text" required="false" name="from" value="" text="Дата начала построения графика."/>
+								<param type="text" required="false" name="to" value="" text="Дата окончания построения графика."/>
+							</choice>
+						</param>
+						<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+						<param type="text" required="false" name="paginationOffset" value="" text="Смещение относительно начала выборки."/>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Автоплатежи autoTransfer." id="4.7.4.0">
+			<request name="Детальная информация по автопереводу." id="4.7.4.0.1">
+				<action url="http://psi-address/atm/private/autotransfers/info.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Id автоперевода"/>
+					</params>
+				</action>
+			</request>
+			<request name="График исполнения автоперевода." id="4.7.4.0.2">
+				<action url="http://psi-address/atm/private/autotransfers/abstract.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Id автоперевода"/>
+						<param type="choice">
+							<choice>
+								<param type="text" required="false" name="from" value="" text="Дата начала построения графика."/>
+								<param type="text" required="false" name="to" value="" text="Дата окончания построения графика."/>
+							</choice>
+						</param>
+						<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+						<param type="text" required="false" name="paginationOffset" value="" text="Смещение относительно начала выборки."/>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Копилки." id="4.7.5">
+			<request name="Список копилок." id="4.7.5.1" service="MoneyBoxManagement" requireUDBO="false">
+				<action url="http://psi-address/atm/private/moneyboxes/list.do" method="post">
+					<params>
+						<param type="text" required="false" name="cardId" value="" text="Идентификатор карты для фильтрации"/>
+						<param type="text" required="false" name="accountId" value="" text="Идентификатор вклада для фильтрации"/>
+					</params>
+				</action>
+			</request>
+			<request name="Детальная информация по копилке." id="4.7.5.2" service="MoneyBoxManagement" requireUDBO="false">
+				<action url="http://psi-address/atm/private/moneyboxes/info.do" method="post">
+					<params>
+						<param type="text" required="false" name="linkId" value="" text="Id автоплатежа(из AutoPay) если type = subscription"/>
+						<param type="text" required="false" name="claimId" value="" text="Id документа в ЕРИБ в статусе «черновик». Если type = claim"/>
+					</params>
+				</action>
+			</request>
+			<request name="График исполнения автоплатежа." id="4.7.5.3" service="MoneyBoxManagement" requireUDBO="false">
+				<action url="http://psi-address/atm/private/autosubscriptions/abstract.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Id автоплатежа. Операция доступна только для копилок из списка с type=subscription"/>
+						<param type="choice">
+							<choice>
+								<param type="text" required="false" name="from" value="" text="Дата начала построения графика."/>
+								<param type="text" required="false" name="to" value="" text="Дата окончания построения графика."/>
+							</choice>
+						</param>
+						<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+						<param type="text" required="false" name="paginationOffset" value="" text="Смещение относительно начала выборки."/>
+					</params>
+				</action>
+			</request>
+		</operation>
+	</operation>
+	<operation name="История операций" id="4.8">
+		<request name="История операций" id="4.8.0" service="Payments" requireUDBO="false">
+			<action url="http://psi-address/atm/private/payments/list.do" method="post">
+				<params>
+					<param type="list" required="false" name="status" text="Статус операции">
+						<list>
+							<option value="all">В любом статусе</option>
+							<option value="ATM_STATES_BATCH">Технический статус</option>
+							<option value="INITIAL">Проинициализированный</option>
+							<option value="DRAFT">Частично заполненный</option>
+							<option value="SAVED">Введен</option>
+							<option value="EXECUTED">Исполнен</option>
+							<option value="REFUSED">Отказан</option>
+							<option value="RECALLED">Отозван</option>
+							<option value="ERROR">Платеж не может быть исполнен, необходимо обратиться в банк.</option>
+							<option value="DELAYED_DISPATCH">Ожидается обработка</option>
+							<option value="DISPATCHED">Обрабатывается</option>
+							<option value="INITIAL">Документ создан, но еще не сохранен</option>
+							<option value="WAIT_CONFIRM">Документ, ожидающий дополнительного подтверждения</option>
+							<option value="UNKNOW">Статус документа не известен</option>
+							<option value="SUCCESSED">Платеж успешно исполнен банком: денежные средства переведены на счет получателя платежа</option>
+							<option value="PARTLY_EXECUTED">Документ подтвержден и передан на обработку в банк</option>
+							<option value="SAVED_TEMPLATE">Сохраненный шаблон</option>
+							<option value="TEMPLATE">Подтвержденный шаблон</option>
+							<option value="WAIT_CONFIRM_TEMPLATE">Шаблон, ожидающий дополнительного подтверждения</option>
+							<option value="DELETED">Документ удален</option>
+							<option value="STATEMENT_READY">Заявка на получение выписки из ПФР готова к немедленному получению</option>
+							<option value="ADOPTED">Заявка принята</option>
+							<option value="OFFLINE_SAVED">Введен</option>
+							<option value="OFFLINE_DELAYED">Ожидается обработка</option>
+							<option value="BILLING_CONFIRM_TIMEOUT">Таймаут при подтверждении в биллинге</option>
+							<option value="ABS_RECALL_TIMEOUT">Таймаут при отзыве платежа в АБС</option>
+							<option value="INITIAL_LONG_OFFER">Частично заполнен</option>
+							<option value="BILLING_GATE_CONFIRM_TIMEOUT">Таймаут при подтверждении в биллинге</option>
+							<option value="ABS_GATE_RECALL_TIMEOUT">Таймаут при отзыве платежа в АБС</option>
+							<option value="WAIT_CLIENT_MESSAGE">Не полностью заполненный шаблон (черновик)</option>
+							<option value="SHOW_RECOMMENDATIONS">Специфичный для ПФП статус. Рекомендации по использованию кредитной карты.</option>
+							<option value="CHOOSE_CARD">Специфичный для ПФП статус. Эффект использования кредитной карты</option>
+							<option value="EDIT_RISK_PROFILE_FORM">Специфичный для ПФП статус. Заполнение ответов на вопросы для определения риск профиля</option>
+							<option value="SHOW_RISK_PROFILE_FORM">Специфичный для ПФП статус. Просмотр риск профиля клиентом</option>
+							<option value="EDIT_PERSON_PORTFOLIOS">Специфичный для ПФП статус. Формирование клиентских портфелей</option>
+							<option value="FINANCE_PLAN">Специфичный для ПФП статус. Финансовый прогноз</option>
+							<option value="COMPLITE">Специфичный для ПФП статус. Просмотр информации о прохождении ПФП</option>
+							<option value="COMPLITE_OLD">Специфичный для ПФП статус. Просмотр информации о прохождении ПФП</option>
+							<option value="INITIAL2">Черновик. Специфичный статус для расширенной заявки на кредит.</option>
+							<option value="INITIAL3">Черновик. Специфичный статус для расширенной заявки на кредит.</option>
+							<option value="INITIAL4">Черновик. Специфичный статус для расширенной заявки на кредит.</option>
+							<option value="INITIAL5">Черновик. Специфичный статус для расширенной заявки на кредит.</option>
+							<option value="INITIAL6">Черновик. Специфичный статус для расширенной заявки на кредит.</option>
+						</list>
+					</param>
+					<param type="list" required="false" name="form" text="Форма платежа">
+						<list>
+							<option value="">ВСЕ ФОРМЫ</option>
+							<option value="RurPayJurSB">Документ оплаты услуг</option>
+							<option value="InternalPayment">Документ перевода между счетами</option>
+							<option value="InternalPaymentLongOffer">Заявка на подключение автоплатежа перевода между своими счетами</option>
+							<option value="JurPayment">Документ перевода организации</option>
+							<option value="RurPayment">Перевод частному лицу</option>
+							<option value="RurPaymentLongOffer">Заявка на подключение автоплатежа перевода частному лицу</option>
+							<option value="CreateAutoPaymentPayment">Документ создания автоплатежа autoPayment</option>
+							<option value="EditAutoPaymentPayment">Документ редактирования автоплатежа autoPayment</option>
+							<option value="RefuseAutoPaymentPayment">Документ отмены автоплатежа autoPayment</option>
+							<option value="CreateAutoSubscriptionPayment">Документ создания автоплатежа autoSubscription</option>
+							<option value="EditAutoSubscriptionPayment">Документ редактирования автоплатежа autoSubscription</option>
+							<option value="CloseAutoSubscriptionPayment">Документ закрытия автоплатежа autoSubscription</option>
+							<option value="RefuseLongOffer">Отмена автоплатежа longOffer</option>
+							<option value="AccountOpeningClaim">Документ заявки на открытие вклада</option>
+							<option value="AccountClosingPayment">Закрытие вклада</option>
+							<option value="LoanCardOffer">Заявка на предодобренную кредитную карту</option>
+							<option value="LoanCardProduct">Заявка на кредитную карту</option>
+							<option value="LoyaltyProgramRegistrationClaim">Заявка на регистрацию в программе лояльности</option>
+							<option value="PFRStatementClaim">Заявка на получение выписки ПФР</option>
+							<option value="DelayAutoSubscriptionPayment">Документ приостановки автоплатежа autoSubscription</option>
+							<option value="RecoveryAutoSubscriptionPayment">Документ возобновления автоплатежа autoSubscription</option>
+							<option value="LoanProduct">Заявка на кредит</option>
+							<option value="LoanOffer">Заявка на предодобренный кредит</option>
+							<option value="LoanPayment">Заявка на погашение кредита</option>
+							<option value="LoanPaymentLongOffer">Заявка на подключение автоплатежа погашения кредита</option>
+							<option value="CreateP2PAutoTransferClaim">Заявка на создание P2P автоперевода</option>
+							<option value="EditP2PAutoTransferClaim">Заявка на редактирование P2P автоперевода</option>
+							<option value="RecoveryP2PAutoTransferClaim">Заявка на возобновление действия P2P автоперевода</option>
+							<option value="DelayP2PAutoTransferClaim">Заявка на приостановку действия P2P автоперевода</option>
+							<option value="CloseP2PAutoTransferClaim">Заявка на закрытие P2P автоперевода</option>
+							<option value="CreateMoneyBoxPayment">Заявка на подключение копилки</option>
+							<option value="EditMoneyBoxClaim">Заявка на редактирование копилки</option>
+						</list>
+					</param>
+					<param type="choice">
+						<choice>
+							<param type="text" required="false" name="from" value="" text="Дата начала"/>
+							<param type="text" required="false" name="to" value="" text="Дата окончания"/>
+						</choice>
+					</param>
+					<param type="list" required="false" name="creationType" text="Канал создания документа">
+						<list>
+							<option value="internet">СБОЛ</option>
+							<option value="sms">СМС</option>
+							<option value="mobile">Мобильное приложение</option>
+							<option value="atm">СИРИУС</option>
+						</list>
+					</param>
+					<param type="text" required="false" name="paginationSize" value="" text="Размер выборки"/>
+					<param type="text" required="false" name="paginationOffset" value="" text="Смещение в страницах"/>
+				</params>
+			</action>
+		</request>
+		<request name="Запрос статуса платежа" id="4.8.1" requireUDBO="false">
+			<action url="http://psi-address/atm/private/payments/status.do" method="post">
+				<params>
+					<param type="text" required="true" name="id" value="" text="ID платежа"/>
+				</params>
+			</action>
+		</request>
+	</operation>
+	<operation name="Платежи и заявки" id="4.9">
+		<operation name="Перевод между своими счетами." id="4.9.1">
+			<operation name="Перевод между моими счетами InternalPayment." id="4.9.1.1">
+				<request name="Инициализация платежа." id="4.9.1.1.1" service="InternalPayment" requireUDBO="true">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="InternalPayment" text="form:InternalPayment"/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Перевод между счетами." id="4.9.1.1.2" service="InternalPayment" requireUDBO="true">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="InternalPayment" text="form:InternalPayment"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.1.1.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Создание автоплатежа перевода между своими счетами InternalPaymentLongOffer." id="4.9.1.2">
+				<request name="Инициализация платежа." id="4.9.1.2.1" service="InternalPayment" requireUDBO="true">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="InternalPayment" text="form:InternalPayment"/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Инициализация заявки на автоплатеж." id="4.9.1.2.2" service="CreateLongOfferPayment" requireUDBO="true">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="makeLongOffer" text="Операция:makeLongOffer"/>
+							<param type="read" required="true" name="form" value="InternalPayment" text="form:InternalPayment"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.1.2.1" fill="true"/>
+									<option value="4.9.1.2.2"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+				<request name="Подключение автоплатежа." id="4.9.1.2.3" service="CreateLongOfferPayment" requireUDBO="true">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.1.2.1"/>
+									<option value="4.9.1.2.2" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Создание автоперевода P2P между моими картами. CreateP2PAutoTransferClaim" id="4.9.1.3">
+				<request name="Инициализация заявки на автоперевод (первый шаг)." id="4.9.1.3.1" service="CreateP2PAutoTransferClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="list" required="false" name="operation" text="Наименование операции">
+								<list>
+									<option value="init">Cоздания автоперевода с нуля</option>
+									<option value="makeAutoTransfer">Создание автоперевода по существующему документу перевода между своими счетами</option>
+								</list>
+							</param>
+							<param type="text" required="false" name="id" value="" text="Идентификатор платежа для создания автоперевода по существующему переводу между своими счетами."/>
+							<param type="read" required="true" name="form" value="CreateP2PAutoTransferClaim" text="form:CreateP2PAutoTransferClaim"/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Инициализация заявки на автоперевод (второй шаг)." id="4.9.1.3.2" service="CreateP2PAutoTransferClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="makeLongOffer" text="Операция:makeLongOffer"/>
+							<param type="read" required="true" name="form" value="CreateP2PAutoTransferClaim" text="form:CreateP2PAutoTransferClaim"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.1.3.1" fill="true"/>
+									<option value="4.9.1.3.2"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+				<request name="Подключение автоперевода." id="4.9.1.3.3" service="CreateP2PAutoTransferClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.1.3.1"/>
+									<option value="4.9.1.3.2" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Подключение копилки." id="4.9.1.4">
+				<request name="Инициализация платежа." id="4.9.1.4.1" service="CreateMoneyBoxPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="CreateMoneyBoxPayment" text="form:CreateMoneyBoxPayment"/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Инициализация платежа по существующему переводу между своими счетами." id="4.9.1.4.1.1" service="CreateMoneyBoxPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/makeLongOffer.do" method="post">
+						<params>
+							<param type="read" required="true" name="form" value="CreateMoneyBoxPayment" text="form:CreateMoneyBoxPayment"/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+							<param type="text" required="false" name="id" value="" text="Идентификатор платежа для создания копилки по существующему переводу между своими счетами."/>
+						</params>
+					</action>
+				</request>
+				<request name="Сохранение копилки." id="4.9.1.4.2" service="CreateMoneyBoxPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="CreateMoneyBoxPayment" text="form:CreateMoneyBoxPayment"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.1.4.1" fill="true"/>
+									<option value="4.9.1.4.1.1"/>
+									<option value="4.9.1.4.2"/>
+								</list>
+							</param>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.1.4.1"/>
+									<option value="4.9.1.4.1.1" fill="true"/>
+									<option value="4.9.1.4.2"/>
+								</list>
+							</param>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.1.4.1"/>
+									<option value="4.9.1.4.1.1"/>
+									<option value="4.9.1.4.2" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+		</operation>
+		<operation name="Перевод организации JurPayment." id="4.9.2">
+			<request name="Инициализация платежа." id="4.9.2.1" service="JurPayment" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/jurPayment/edit.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+						<param type="choice">
+							<choice>
+								<param type="text" required="false" name="id" value="" text="Идентификатор для повторения платежа."/>
+							</choice>
+							<choice>
+								<param type="text" required="false" name="template" value="" text="Идентификатор шаблона для платежа по шаблону."/>
+							</choice>
+						</param>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+			<request name="Ввод первичных данных." id="4.9.2.2" service="JurPayment" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/jurPayment/edit.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="next" text="Операция:next"/>
+						<param type="text" required="false" name="id" value="" text="Идентификатор для повторения платежа."/>
+						<param type="text" required="false" name="template" value="" text="Идентификатор шаблона для платежа по шаблону."/>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.2.1" fill="true"/>
+								<option value="4.9.2.2"/>
+								<option value="4.9.2.3"/>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+			<request name="Ввод дополнительных данных." id="4.9.2.3" service="JurPayment" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="next" text="Операция:next"/>
+						<param type="read" required="true" name="form" value="JurPayment" text="form:JurPayment"/>
+						<param type="text" required="true" name="id" value="" text="Id платежа из документа."/>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.2.1"/>
+								<option value="4.9.2.2" fill="true"/>
+								<option value="4.9.2.3"/>
+							</list>
+						</param>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.2.1"/>
+								<option value="4.9.2.2"/>
+								<option value="4.9.2.3" fill="true"/>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Перевод частному лицу." id="4.9.3">
+			<operation name="Перевод частному лицу RurPayment." id="4.9.3.1">
+				<request name="Инициализация платежа." id="4.9.3.1.1" service="RurPayment" requireUDBO="true">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="RurPayment" text="form:RurPayment"/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Перевод." id="4.9.3.1.2" service="RurPayment" requireUDBO="true">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="RurPayment" text="form:RurPayment"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.3.1.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+				<request name="Получение информации о валюте счета зачисления." id="4.9.3.1.3" service="RurPayment" requireUDBO="true">
+					<action url="http://psi-address/atm/private/cards/currency.do" method="post">
+						<params>
+							<param type="choice">
+								<choice>
+									<param type="text" required="false" name="cardNumber" value="" text="Номер карты."/>
+								</choice>
+								<choice>
+									<param type="text" required="false" name="phoneNumber" value="" text="Номер телефона. 10 цифр без восьмерки."/>
+								</choice>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Создание автоплатежа перевода частному лицу RurPaymentLongOffer." id="4.9.3.2">
+				<request name="Инициализация платежа." id="4.9.3.2.1" service="RurPayment" requireUDBO="true">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="RurPayment" text="form:RurPayment"/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Инициализация заявки на автоплатеж." id="4.9.3.2.2" service="CreateLongOfferPaymentForRur" requireUDBO="true">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="makeLongOffer" text="Операция:makeLongOffer"/>
+							<param type="read" required="true" name="form" value="RurPayment" text="form:RurPayment"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.3.2.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+				<request name="Подключение автоплатежа." id="4.9.3.2.3" service="CreateLongOfferPaymentForRur" requireUDBO="true">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.3.2.1"/>
+									<option value="4.9.3.2.2" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Создание автоперевода P2P частному лицу на карту клиенту Сбербанка, на карту клиенту Сбербанка по номеру телефона." id="4.9.3.3">
+				<request name="Инициализация заявки на автоперевод (первый шаг)" id="4.9.3.3.1">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="CreateP2PAutoTransferClaim" text="form:CreateP2PAutoTransferClaim"/>
+							<param type="text" required="false" name="id" value="" text="Идентификатор платежа для создания автоперевода по существующему переводу частному лицу."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Инициализация заявки на автоперевод (второй шаг)" id="4.9.3.3.2">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="makeLongOffer" text="Операция:makeLongOffer"/>
+							<param type="read" required="true" name="form" value="CreateP2PAutoTransferClaim" text="form:CreateP2PAutoTransferClaim"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.3.3.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+				<request name="Подключение автоперевода" id="4.9.3.3.3">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.3.3.1"/>
+									<option value="4.9.3.3.2" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+		</operation>
+		<operation name="Оплата услуг." id="4.9.4">
+			<request name="Поиск поставщиков." id="4.9.4.1" service="RurPayJurSB" requireUDBO="false">
+				<action url="http://psi-address/atm/private/provider/search.do" method="post">
+					<params>
+						<param type="text" required="true" name="search" value="" text="Поисковая строка. Наименование получателя, наименование категории, ИНН или номер расчетного счета."/>
+						<param type="choice">
+							<choice>
+								<param type="text" required="false" name="regionId" value="" text="Идентификатор региона пользователя."/>
+							</choice>
+							<choice>
+								<param type="text" required="false" name="regionGuid" value="" text="Кроссблочный идентификатор региона."/>
+							</choice>
+						</param>
+						<param type="bool" required="true" name="autoPaymentOnly" value="false" text="Признак, отвечающий за поиск по поставщикам, поддерживающим создание автоплатежа."/>
+						<param type="bool" required="true" name="includeServices" value="false" text="Признак, влияющий на способ формирования ответа. Если true – в ответе содержатся как поставщики (только непосредственно удовлетворяющие условиям поиска), так и группы услуг (удовлетворяющие условиям поиска)."/>
+						<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+						<param type="text" required="false" name="paginationOffset" value="" text="Сдвиг относительно начала выборки."/>
+					</params>
+				</action>
+			</request>
+			<operation name="Оплата услуги по выбранному поставщику RurPayJurSB." id="4.9.4.2">
+				<request name="Инициализация платежа." id="4.9.4.2.1" service="RurPayJurSB" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/servicesPayments/edit.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+							<param type="choice">
+								<choice>
+									<param type="text" required="false" name="id" value="" text="Идентификатор повторяемого платежа"/>
+								</choice>
+								<choice>
+									<param type="text" required="false" name="template" value="" text="Идентификатор шаблона платежа"/>
+								</choice>
+								<choice>
+									<param type="text" required="false" name="billing" value="" text="Id биллинга"/>
+									<param type="choice">
+										<choice>
+											<param type="text" required="false" name="service" value="" text="Id услуги"/>
+											<param type="text" required="false" name="provider" value="" text="Id поставщика"/>
+										</choice>
+										<choice>
+											<param type="text" required="false" name="serviceGuid" value="" text="Кроссблочный идентификатор услуги"/>
+											<param type="text" required="false" name="providerGuid" value="" text="Кроссблочный идентификатор поставщика"/>
+										</choice>
+									</param>
+								</choice>
+								<choice>
+									<param type="text" required="false" name="barCode" value="" text="Штрих код."/>
+								</choice>
+							</param>
+						</params>
+					</action>
+				</request>
+				<request name="Первый шаг оплаты." id="4.9.4.2.2" service="RurPayJurSB" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/servicesPayments/edit.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="next" text="Операция:next"/>
+							<param type="choice">
+								<choice>
+									<param type="text" required="false" name="id" value="" text="Идентификатор повторяемого платежа"/>
+								</choice>
+								<choice>
+									<param type="text" required="false" name="template" value="" text="Идентификатор шаблона платежа"/>
+								</choice>
+								<choice>
+									<param type="text" required="false" name="billing" value="" text="Id биллинга"/>
+									<param type="choice">
+										<choice>
+											<param type="text" required="false" name="service" value="" text="Id услуги"/>
+											<param type="text" required="false" name="provider" value="" text="Id поставщика"/>
+										</choice>
+										<choice>
+											<param type="text" required="false" name="serviceGuid" value="" text="Кроссблочный идентификатор услуги"/>
+											<param type="text" required="false" name="providerGuid" value="" text="Кроссблочный идентификатор поставщика"/>
+										</choice>
+									</param>
+								</choice>
+								<choice>
+									<param type="text" required="false" name="barCode" value="" text="Штрих код."/>
+								</choice>
+							</param>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.4.2.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+				<request name="Последующие шаги оплаты." id="4.9.4.2.3" service="RurPayJurSB" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="next" text="Операция:next"/>
+							<param type="text" required="true" name="id" value="" text="Id платежа из документа."/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.4.2.1"/>
+									<option value="4.9.4.2.2" fill="true"/>
+									<option value="4.9.4.2.3"/>
+								</list>
+							</param>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.4.2.1"/>
+									<option value="4.9.4.2.2"/>
+									<option value="4.9.4.2.3" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Создание автоплатежа оплаты услуг autoPayment и autoSubscription." id="4.9.4.3">
+				<request name="Инициализация платежа." id="4.9.4.3.1" service="RurPayJurSB" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/servicesPayments/edit.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="text" required="false" name="billing" value="" text="Id биллинга"/>
+							<param type="choice">
+								<choice>
+									<param type="text" required="false" name="service" value="" text="Id услуги"/>
+									<param type="text" required="false" name="provider" value="" text="Id поставщика"/>
+								</choice>
+								<choice>
+									<param type="text" required="false" name="serviceGuid" value="" text="Кроссблочный идентификатор услуги"/>
+									<param type="text" required="false" name="providerGuid" value="" text="Кроссблочный идентификатор поставщика"/>
+								</choice>
+							</param>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Первый шаг оплаты." id="4.9.4.3.2" service="CreateAutoPaymentPayment CreateAutoSubscriptionPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/servicesPayments/edit.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="makeLongOffer" text="Операция:makeLongOffer"/>
+							<param type="text" required="false" name="billing" value="" text="Id биллинга"/>
+							<param type="choice">
+								<choice>
+									<param type="text" required="false" name="service" value="" text="Id услуги"/>
+									<param type="text" required="false" name="provider" value="" text="Id поставщика"/>
+								</choice>
+								<choice>
+									<param type="text" required="false" name="serviceGuid" value="" text="Кроссблочный идентификатор услуги"/>
+									<param type="text" required="false" name="providerGuid" value="" text="Кроссблочный идентификатор поставщика"/>
+								</choice>
+							</param>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.4.3.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+				<request name="Последующие шаги оплаты." id="4.9.4.3.3" service="CreateAutoPaymentPayment CreateAutoSubscriptionPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="next" text="Операция:next"/>
+							<param type="text" required="true" name="id" value="" text="Id платежа из документа."/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.4.3.1"/>
+									<option value="4.9.4.3.2" fill="true"/>
+									<option value="4.9.4.3.3"/>
+								</list>
+							</param>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.4.3.1"/>
+									<option value="4.9.4.3.2"/>
+									<option value="4.9.4.3.3" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+		</operation>
+		<operation name="Шаблоны платежей." id="4.9.5">
+			<request name="Список шаблонов платежей." id="4.9.5.1" service="Templates" requireUDBO="false">
+				<action url="http://psi-address/atm/private/favourite/list/templates.do" method="post">
+					<params>
+						<param type="list" required="false" name="status" text="Параметр для фильтрации шаблонов по статусу (available/notAvailable)">
+							<list>
+								<option value="available">Доступные</option>
+								<option value="notAvailable">Не доступные</option>
+							</list>
+						</param>
+						<param type="list" required="false" name="form" text="Параметр для фильтрации шаблонов по форме. Если не передан, возвращаем все.">
+							<list>
+								<option value="RurPayJurSB">Документ оплаты услуг</option>
+								<option value="InternalPayment">Документ перевода между счетами</option>
+								<option value="InternalPaymentLongOffer">Заявка на подключение автоплатежа перевода между своими счетами</option>
+								<option value="JurPayment">Документ перевода организации</option>
+								<option value="RurPayment">Перевод частному лицу</option>
+								<option value="RurPaymentLongOffer">Заявка на подключение автоплатежа перевода частному лицу</option>
+								<option value="CreateAutoPaymentPayment">Документ создания автоплатежа autoPayment</option>
+								<option value="EditAutoPaymentPayment">Документ редактирования автоплатежа autoPayment</option>
+								<option value="RefuseAutoPaymentPayment">Документ отмены автоплатежа autoPayment</option>
+								<option value="CreateAutoSubscriptionPayment">Документ создания автоплатежа autoSubscription</option>
+								<option value="EditAutoSubscriptionPayment">Документ редактирования автоплатежа autoSubscription</option>
+								<option value="CloseAutoSubscriptionPayment">Документ закрытия автоплатежа autoSubscription</option>
+								<option value="RefuseLongOffer">Отмена автоплатежа longOffer</option>
+								<option value="AccountOpeningClaim">Документ заявки на открытие вклада</option>
+								<option value="AccountClosingPayment">Закрытие вклада</option>
+								<option value="LoanCardOffer">Заявка на предодобренную кредитную карту</option>
+								<option value="LoanCardProduct">Заявка на кредитную карту</option>
+								<option value="LoyaltyProgramRegistrationClaim">Заявка на регистрацию в программе лояльности</option>
+								<option value="PFRStatementClaim">Заявка на получение выписки ПФР</option>
+								<option value="DelayAutoSubscriptionPayment">Документ приостановки автоплатежа autoSubscription</option>
+								<option value="RecoveryAutoSubscriptionPayment">Документ возобновления автоплатежа autoSubscription</option>
+								<option value="LoanProduct">Заявка на кредит</option>
+								<option value="LoanOffer">Заявка на предодобренный кредит</option>
+								<option value="LoanPayment">Заявка на погашение кредита</option>
+								<option value="LoanPaymentLongOffer">Заявка на подключение автоплатежа погашения кредита</option>
+								<option value="CreateP2PAutoTransferClaim">Заявка на создание P2P автоперевода</option>
+								<option value="EditP2PAutoTransferClaim">Заявка на редактирование P2P автоперевода</option>
+								<option value="RecoveryP2PAutoTransferClaim">Заявка на возобновление действия P2P автоперевода</option>
+								<option value="DelayP2PAutoTransferClaim">Заявка на приостановку действия P2P автоперевода</option>
+								<option value="CloseP2PAutoTransferClaim">Заявка на закрытие P2P автоперевода</option>
+								<option value="CreateMoneyBoxPayment">Заявка на подключение копилки</option>
+								<option value="EditMoneyBoxClaim">Заявка на редактирование копилки</option>
+							</list>
+						</param>
+						<param type="list" required="false" name="type" text="Параметр для фильтрации шаблонов по типу. Если не передан, возвращаем все.">
+							<list>
+								<option value="servicesPayments">servicesPayments</option>
+								<option value="jurPayment">jurPayment</option>
+								<option value="payment">payment</option>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+			<request name="Детальная информация по шаблону." id="4.9.5.2" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/template/view.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Идентификатор шаблона."/>
+					</params>
+				</action>
+			</request>
+			<operation name="Оплата типичных платежей по шаблону." id="4.9.5.3">
+				<request name="Инициализация." id="4.9.5.3.1">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="text" required="true" name="template" value="" text="Идентификатор шаблона."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Оплата." id="4.9.5.3.2">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="text" required="true" name="template" value="" text="Идентификатор шаблона."/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.5.3.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Быстрое создание шаблонов." id="4.9.5.4">
+				<request name="Получение имени шаблона по умолчанию." id="4.9.5.4.1" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/quicklyCreateTemplate.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="getTemplateName" text="Операция:getTemplateName"/>
+							<param type="text" required="true" name="payment" value="" text="Идентификатор платежа, по которому создается шаблон. Можно взять из истории операций или из исполненного документа, если это не автоплатеж."/>
+						</params>
+					</action>
+				</request>
+				<request name="Сохранение шаблона." id="4.9.5.4.2" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/quicklyCreateTemplate.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="text" required="true" name="payment" value="" text="Идентификатор платежа, по которому создается шаблон. Можно взять из истории операций или из исполненного документа, если это не автоплатеж."/>
+							<param type="text" required="true" name="templateName" value="" text="Имя шаблона."/>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Удаление шаблона." id="4.9.5.5">
+				<request name="Удаление шаблона." id="4.9.5.5.0" service="RemoveTemplate" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/template/remove.do" method="post">
+						<params>
+							<param type="text" required="true" name="id" value="" text="Идентификатор шаблона."/>
+						</params>
+					</action>
+				</request>
+			</operation>
+		</operation>
+		<operation name="Подтверждение платежа." id="4.9.6">
+			<request name="Подтверждение платежа." id="4.9.6.0">
+				<action url="http://psi-address/atm/private/payments/confirm.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="confirm" text="Операция:confirm"/>
+						<param type="text" required="true" name="id" value="" text="Id платежа."/>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Автоплатежи" id="4.9.7">
+			<operation name="Быстрое создание автоплатежа" id="4.9.7.1">
+				<request name="Инициализация заявки на создание автоплатежа." id="4.9.7.1.1">
+					<action url="http://psi-address/atm/private/payments/makeLongOffer.do" method="post">
+						<params>
+							<param type="text" required="true" name="id" value="" text="Идентификатор документа."/>
+						</params>
+					</action>
+				</request>
+				<request name="Сохранение заявки на создание автоплатежа." id="4.9.7.1.2">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.1.1" fill="true"/>
+									<option value="4.9.7.1.2"/>
+								</list>
+							</param>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.1.1"/>
+									<option value="4.9.7.1.2" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Отмена автоплатежа longOffer RefuseLongOffer." id="4.9.7.2">
+				<request name="Инициализация заявки." id="4.9.7.2.1" service="RefuseLongOffer" requireUDBO="true">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="RefuseLongOffer" text="form:RefuseLongOffer"/>
+							<param type="text" required="true" name="longOfferId" value="" text="Идентификатор автоплатежа."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Отмена автоплатежа." id="4.9.7.2.2" service="RefuseLongOffer" requireUDBO="true">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="RefuseLongOffer" text="form:RefuseLongOffer"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.2.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Редактирование автоплатежа autoPayment EditAutoPaymentPayment." id="4.9.7.3">
+				<request name="Инициализация заявки." id="4.9.7.3.1" service="EditAutoPaymentPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="EditAutoPaymentPayment" text="form:EditAutoPaymentPayment"/>
+							<param type="text" required="true" name="linkId" value="" text="Идентификатор автоплатежа."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Редактирование автоплатежа." id="4.9.7.3.2" service="EditAutoPaymentPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="EditAutoPaymentPayment" text="form:EditAutoPaymentPayment"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.3.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Отмена автоплатежа autoPayment RefuseAutoPaymentPayment." id="4.9.7.4">
+				<request name="Инициализация заявки." id="4.9.7.4.1" service="RefuseAutoPaymentPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="RefuseAutoPaymentPayment" text="form:RefuseAutoPaymentPayment"/>
+							<param type="text" required="true" name="linkId" value="" text="Идентификатор автоплатежа."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Отмена автоплатежа." id="4.9.7.4.2" service="RefuseAutoPaymentPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="RefuseAutoPaymentPayment" text="form:RefuseAutoPaymentPayment"/>
+							<param type="text" required="true" name="linkId" value="" text="Идентификатор автоплатежа."/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.4.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Редактирование автоплатежа autoSubscription EditAutoSubscriptionPayment." id="4.9.7.5">
+				<request name="Инициализация заявки." id="4.9.7.5.1" service="EditAutoSubscriptionPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="EditAutoSubscriptionPayment" text="form:EditAutoSubscriptionPayment"/>
+							<param type="text" required="true" name="autoSubNumber" value="" text="Идентификатор автоплатежа."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Редактирование автоплатежа." id="4.9.7.5.2" service="EditAutoSubscriptionPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="EditAutoSubscriptionPayment" text="form:EditAutoSubscriptionPayment"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.5.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Редактирование автоперевода autoTransfer EditP2PAutoTransferClaim." id="4.9.7.6">
+				<request name="Инициализация заявки." id="4.9.7.6.1" service="EditP2PAutoTransferClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="EditP2PAutoTransferClaim" text="form:EditP2PAutoTransferClaim"/>
+							<param type="text" required="true" name="autoSubNumber" value="" text="Идентификатор автоперевода."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Редактирование автоперевода." id="4.9.7.6.2" service="EditP2PAutoTransferClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="EditP2PAutoTransferClaim" text="form:EditP2PAutoTransferClaim"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.6.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Закрытие автоплатежа autoSubscription CloseAutoSubscriptionPayment." id="4.9.7.7">
+				<request name="Инициализация заявки." id="4.9.7.7.1" service="CloseAutoSubscriptionPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="CloseAutoSubscriptionPayment" text="form:CloseAutoSubscriptionPayment"/>
+							<param type="text" required="true" name="autoSubNumber" value="" text="Идентификатор автоплатежа."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Закрытие автоплатежа." id="4.9.7.7.2" service="CloseAutoSubscriptionPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="CloseAutoSubscriptionPayment" text="form:CloseAutoSubscriptionPayment"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.7.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Закрытие автоперевода autoTransfer CloseP2PAutoTransferClaim." id="4.9.7.8">
+				<request name="Инициализация заявки." id="4.9.7.8.1" service="CloseP2PAutoTransferClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="CloseP2PAutoTransferClaim" text="form:CloseP2PAutoTransferClaim"/>
+							<param type="text" required="true" name="autoSubNumber" value="" text="Идентификатор автоперевода."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Закрытие автоперевода." id="4.9.7.8.2" service="CloseP2PAutoTransferClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="CloseP2PAutoTransferClaim" text="form:CloseP2PAutoTransferClaim"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.8.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Приостановка автоплатежа DelayAutoSubscriptionPayment." id="4.9.7.9">
+				<request name="Инициализация заявки." id="4.9.7.9.1" service="DelayAutoSubscriptionPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="DelayAutoSubscriptionPayment" text="form:DelayAutoSubscriptionPayment"/>
+							<param type="text" required="true" name="autoSubNumber" value="" text="Идентификатор автоплатежа."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Приостановка автоплатежа." id="4.9.7.9.2" service="DelayAutoSubscriptionPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="DelayAutoSubscriptionPayment" text="form:DelayAutoSubscriptionPayment"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.9.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Приостановка автоперевода autoTransfer DelayP2PAutoTransferClaim" id="4.9.7.10">
+				<request name="Инициализация заявки." id="4.9.7.10.1" service="DelayP2PAutoTransferClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="DelayP2PAutoTransferClaim" text="form:DelayP2PAutoTransferClaim"/>
+							<param type="text" required="true" name="autoSubNumber" value="" text="Идентификатор автоперевода."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Приостановка автоперевода." id="4.9.7.10.2" service="DelayP2PAutoTransferClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="DelayP2PAutoTransferClaim" text="form:DelayP2PAutoTransferClaim"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.10.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Возобновление автоплатежа RecoveryAutoSubscriptionPayment." id="4.9.7.11">
+				<request name="Инициализация заявки." id="4.9.7.11.1" service="RecoveryAutoSubscriptionPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="RecoveryAutoSubscriptionPayment" text="form:RecoveryAutoSubscriptionPayment"/>
+							<param type="text" required="true" name="autoSubNumber" value="" text="Идентификатор автоплатежа."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Возобновление автоплатежа." id="4.9.7.11.2" service="RecoveryAutoSubscriptionPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="RecoveryAutoSubscriptionPayment" text="form:RecoveryAutoSubscriptionPayment"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.11.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Возобновление автоперевода RecoveryP2PAutoTransferClaim." id="4.9.7.12">
+				<request name="Инициализация заявки." id="4.9.7.12.1" service="RecoveryP2PAutoTransferClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="RecoveryP2PAutoTransferClaim" text="form:RecoveryP2PAutoTransferClaim"/>
+							<param type="text" required="true" name="autoSubNumber" value="" text="Идентификатор автоперевода."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Возобновление автоперевода." id="4.9.7.12.2" service="RecoveryP2PAutoTransferClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="RecoveryP2PAutoTransferClaim" text="form:RecoveryP2PAutoTransferClaim"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.12.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Печать чека исполненного автоплатежа." id="4.9.7.13">
+				<request name="Печать чека исполненного автоплатежа." id="4.9.7.13.0">
+					<action url="http://psi-address/atm/private/autosubscriptions/payment/info/print.do" method="post">
+						<params>
+							<param type="text" required="true" name="id" value="" text="Идентификатор запрашиваемого платежа по автоплатежу."/>
+							<param type="text" required="true" name="subscriptionId" value="" text="Идентификатор автоплатежа."/>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Печать чека исполненного автоперевода." id="4.9.7.14">
+				<request name="Печать чека исполненного автоперевода." id="4.9.7.14.0">
+					<action url="http://psi-address/atm/private/autotransfers/payment/info/print.do" method="post">
+						<params>
+							<param type="text" required="true" name="id" value="" text="Идентификатор запрашиваемого платежа по автопереводу."/>
+							<param type="text" required="true" name="subscriptionId" value="" text="Идентификатор автоперевода."/>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Редактирование Копилки EditMoneyBoxClaim." id="4.9.7.15">
+				<request name="Инициализация заявки." id="4.9.7.15.1" service="EditMoneyBoxClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/moneyboxes/edit.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="EditMoneyBoxClaim" text="form:EditMoneyBoxClaim"/>
+							<param type="text" required="true" name="autoSubNumber" value="" text="Идентификатор копилки."/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Сохранение заявки." id="4.9.7.15.2" service="EditMoneyBoxClaim" requireUDBO="false">
+					<action url="http://psi-address/atm/private/moneyboxes/edit.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="EditMoneyBoxClaim" text="form:EditMoneyBoxClaim"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.7.15.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Изменение статуса копилки(Приостановка/Возобновление/Отмена)." id="4.9.7.16">
+				<request name="Изменение статуса копилки(Приостановка/Возобновление/Отмена)." id="4.9.7.16.0" service="CloseMoneyBoxPayment RefuseMoneyBoxPayment RecoverMoneyBoxPayment" requireUDBO="false">
+					<action url="http://psi-address/atm/private/moneyboxes/statusMod.do" method="post">
+						<params>
+							<param type="text" required="true" name="id" value="" text="Идентификатор копилки."/>
+							<param type="list" required="false" name="changePaymentStatusType" text="Вид операции изменения статуса">
+								<list>
+									<option value="REFUSE">Приостановка</option>
+									<option value="RECOVER">Возобновление</option>
+									<option value="CLOSE">Закрытие(Отмена)</option>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Печать чека исполненного платежа по копилке." id="4.9.7.17">
+				<request name="Печать чека исполненного платежа по копилке." id="4.9.7.17.0" service="MoneyBoxManagement" requireUDBO="false">
+					<action url="http://psi-address/atm/private/moneyboxes/payment/info/print.do" method="post">
+						<params>
+							<param type="text" required="true" name="id" value="" text="Идентификатор запрашиваемого платежа по автоплатежу."/>
+							<param type="text" required="true" name="subscriptionId" value="" text="Идентификатор копилки."/>
+						</params>
+					</action>
+				</request>
+			</operation>
+		</operation>
+		<operation name="Повтор типичных платежей." id="4.9.8">
+			<request name="Инициализация." id="4.9.8.1">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+						<param type="bool" required="false" name="copying" value="true" text="Признак повторения платежа. Константа true."/>
+						<param type="text" required="true" name="id" value="" text="Идентификатор платежа для повторения."/>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+			<request name="Оплата." id="4.9.8.2">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+						<param type="bool" required="false" name="copying" value="true" text="Признак повторения платежа. Константа true."/>
+						<param type="text" required="true" name="id" value="" text="Идентификатор платежа для повторения."/>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.8.1" fill="true"/>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Открытие вклада AccountOpeningClaim." id="4.9.9">
+			<request name="Список условий размещения средств." id="4.9.9.1" service="AccountOpeningClaim" requireUDBO="true">
+				<action url="http://psi-address/atm/private/deposits/products/list.do" method="post">
+					<params>
+						<param type="read" required="true" name="form" value="AccountOpeningClaim" text="form:AccountOpeningClaim"/>
+					</params>
+				</action>
+			</request>
+			<request name="Детальная информация по виду вклада." id="4.9.9.2" service="AccountOpeningClaim" requireUDBO="true">
+				<action url="http://psi-address/atm/private/deposits/products/info.do" method="post">
+					<params>
+						<param type="read" required="true" name="form" value="AccountOpeningClaim" text="form:AccountOpeningClaim"/>
+						<param type="text" required="true" name="depositId" value="" text="Идентификатор вклада [depositId]."/>
+						<param type="text" required="true" name="depositType" value="" text="Идентификатор вида вклада [depositType]."/>
+						<param type="text" required="false" name="depositGroup" value="" text="Код группы депозитного продукта [depositGroup]."/>
+					</params>
+				</action>
+			</request>
+			<request name="Определение подвида вклада." id="4.9.9.3" service="AccountOpeningClaim" requireUDBO="true">
+				<action url="http://psi-address/atm/private/deposits/products/typeInfo.do" method="post">
+					<params>
+						<param type="read" required="true" name="form" value="AccountOpeningClaim" text="form:AccountOpeningClaim"/>
+						<param type="text" required="true" name="depositId" value="" text="Идентификатор вклада [depositId]."/>
+						<param type="text" required="true" name="depositType" value="" text="Идентификатор вида вклада [depositType]."/>
+						<param type="text" required="false" name="depositGroup" value="" text="Код группы депозитного продукта [depositGroup]."/>
+						<param type="text" required="true" name="openingDate" value="" text="Дата открытия вклада. Пример даты: 01.10.1994"/>
+						<param type="text" required="false" name="period" value="" text="Срок. Пример: 0-1-90 = 0 лет 1 месяц 90 дней. Не отправляется, если вклад является бессрочным."/>
+						<param type="text" required="true" name="currencyCode" value="" text="Буквенный ISO код валюты."/>
+						<param type="text" required="false" name="minBalance" value="" text="Нижняя граница диапазона суммы (minDepositBalance), для которой открывается данный подвид (либо сумма зачисления в валюте вклада для вкладов без неснижаемого остатка withMinimumBalance == false). Не отправляется, если вклад является бессрочным."/>
+					</params>
+				</action>
+			</request>
+			<request name="Инициализация заявки." id="4.9.9.4" service="AccountOpeningClaim" requireUDBO="true">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+						<param type="read" required="true" name="form" value="AccountOpeningClaim" text="form:AccountOpeningClaim"/>
+						<param type="text" required="true" name="depositId" value="" text="Идентификатор вклада [depositId]."/>
+						<param type="text" required="true" name="depositType" value="" text="Идентификатор вида вклада [depositType]."/>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						<param type="list" required="false" name="atmPlace" text="Место установки устройства.">
+							<list>
+								<option value="FILIAL">Установлен в ВСП</option>
+								<option value="PREDPRIYATIE">Установлен на предприятии</option>
+								<option value="0">Нет информации</option>
+							</list>
+						</param>
+						<param type="text" required="false" name="atmTB" value="" text="Номер ТБ, где установлено устройство."/>
+						<param type="text" required="false" name="atmOSB" value="" text="Номер ОСБ, где установлено устройство."/>
+						<param type="text" required="false" name="atmVSP" value="" text="Номер ВСП, где установлено устройство."/>
+						<param type="text" required="false" name="depositGroup" value="" text="Код группы депозитного продукта [depositGroup]."/>
+					</params>
+				</action>
+			</request>
+			<request name="Открытие вклада." id="4.9.9.5" service="AccountOpeningClaim" requireUDBO="true">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+						<param type="read" required="true" name="form" value="AccountOpeningClaim" text="form:AccountOpeningClaim"/>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.9.4" fill="true"/>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+			<request name="Заявление на открытие вклада." id="4.9.9.6" service="AccountOpeningClaim" requireUDBO="true">
+				<action url="http://psi-address/atm/private/deposits/terms.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Идентификатор документа."/>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Закрытие вкладов AccountClosingPayment." id="4.9.10">
+			<request name="Инициализация." id="4.9.10.1" service="AccountClosingPayment" requireUDBO="true">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+						<param type="read" required="true" name="form" value="AccountClosingPayment" text="form:AccountClosingPayment"/>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+			<request name="Закрытие." id="4.9.10.2" service="AccountClosingPayment" requireUDBO="true">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+						<param type="read" required="true" name="form" value="AccountOpeningClaim" text="form:AccountOpeningClaim"/>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.10.1" fill="true"/>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Печать чека операции." id="4.9.11">
+			<request name="Печать чека операции." id="4.9.11.0">
+				<action url="http://psi-address/atm/private/payments/printCheck.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Id операции. Можно взять из истории операций или из исполненного документа."/>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Заявки на кредитную карту LoanCardOffer, LoanCardProduct." id="4.9.12">
+			<request name="Инициализация." id="4.9.12.1" service="LoanCardProduct" requireUDBO="true">
+				<action url="http://psi-address/atm/private/payments/loan/cardClaim.do" method="post">
+					<params>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+			<request name="Шаг выбора доходов." id="4.9.12.2" service="LoanCardProduct" requireUDBO="true">
+				<action url="http://psi-address/atm/private/payments/incomeLevel.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="next" text="Операция:next"/>
+						<param type="text" required="true" name="id" value="" text="Идентификатор диапазона."/>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+			<request name="Шаг выбора условий." id="4.9.12.3" service="LoanCardProduct" requireUDBO="true">
+				<action url="http://psi-address/atm/private/payments/loan/cardProduct.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="next" text="Операция:next"/>
+						<param type="text" required="true" name="loanId" value="" text="Идентификатор выбранного условия [loanId]."/>
+						<param type="text" required="true" name="changeDate" value="" text="Время последнего изменения условий в миллисекундах."/>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+			<request name="Шаг выбора предодобренных условий." id="4.9.12.4" service="LoanCardOffer" requireUDBO="true">
+				<action url="http://psi-address/atm/private/payments/loan/cardOffer.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="next" text="Операция:next"/>
+						<param type="text" required="true" name="loanId" value="" text="Идентификатор выбранного условия [loanId]."/>
+						<param type="text" required="true" name="offerId" value="" text="Идентификатор выбранного условия [offerId]."/>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+			<request name="Выбор офиса для получения карты." id="4.9.12.5" service="CreditCardOffice" requireUDBO="true">
+				<action url="http://psi-address/atm/private/creditcard/office/list.do" method="post">
+					<params>
+						<param type="text" required="false" name="region" value="" text="Населенный пункт/город."/>
+						<param type="text" required="false" name="street" value="" text="Улица."/>
+						<param type="text" required="false" name="name" value="" text="Наименование."/>
+						<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+						<param type="text" required="false" name="paginationOffset" value="" text="Смещение относительно начала выборки."/>
+					</params>
+				</action>
+			</request>
+			<request name="Оформление заявки." id="4.9.12.6" service="LoanCardProduct LoanCardOffer" requireUDBO="true">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+						<param type="read" required="true" name="form" value="" text="form:"/>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.12.1" fill="true"/>
+								<option value="4.9.12.2"/>
+								<option value="4.9.12.3"/>
+								<option value="4.9.12.4"/>
+								<option value="4.9.12.5"/>
+							</list>
+						</param>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.12.1"/>
+								<option value="4.9.12.2" fill="true"/>
+								<option value="4.9.12.3"/>
+								<option value="4.9.12.4"/>
+								<option value="4.9.12.5"/>
+							</list>
+						</param>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.12.1"/>
+								<option value="4.9.12.2"/>
+								<option value="4.9.12.3" fill="true"/>
+								<option value="4.9.12.4"/>
+								<option value="4.9.12.5"/>
+							</list>
+						</param>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.12.1"/>
+								<option value="4.9.12.2"/>
+								<option value="4.9.12.3"/>
+								<option value="4.9.12.4" fill="true"/>
+								<option value="4.9.12.5"/>
+							</list>
+						</param>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.12.1"/>
+								<option value="4.9.12.2"/>
+								<option value="4.9.12.3"/>
+								<option value="4.9.12.4"/>
+								<option value="4.9.12.5" fill="true"/>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Заявка на регистрацию в программе лояльности LoyaltyProgramRegistrationClaim." id="4.9.13">
+			<request name="Инициализация." id="4.9.13.1" service="LoyaltyProgramRegistrationClaim" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+						<param type="read" required="true" name="form" value="LoyaltyProgramRegistrationClaim" text="form:LoyaltyProgramRegistrationClaim"/>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+			<request name="Заявка на регистрацию." id="4.9.13.2" service="LoyaltyProgramRegistrationClaim" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+						<param type="read" required="true" name="form" value="LoyaltyProgramRegistrationClaim" text="form:LoyaltyProgramRegistrationClaim"/>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.13.1" fill="true"/>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Просмотр платежа." id="4.9.14">
+			<request name="Просмотр платежа." id="4.9.14.0">
+				<action url="http://psi-address/atm/private/payments/view.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Id подтвержденного платежа."/>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Заявка на получение выписки из ПФР PFRStatementClaim." id="4.9.15">
+			<request name="Инициализация." id="4.9.15.1" service="PFRStatementClaim" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+						<param type="read" required="true" name="form" value="PFRStatementClaim" text="form:PFRStatementClaim"/>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+			<request name="Заявка." id="4.9.15.2" service="PFRStatementClaim" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+						<param type="read" required="true" name="form" value="PFRStatementClaim" text="form:PFRStatementClaim"/>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.15.1" fill="true"/>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Переход к действию по умолчанию." id="4.9.16">
+			<request name="Переход к действию по умолчанию." id="4.9.16.0">
+				<action url="http://psi-address/atm/private/payments/default-action.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Id подтвержденного платежа."/>
+						<param type="text" required="true" name="objectFormName" value="" text="Наименование формы платежа."/>
+						<param type="list" required="false" name="stateCode" text="Статус платежа">
+							<list>
+								<option value="INITIAL">Проинициализированный</option>
+								<option value="DRAFT">Частично заполненный</option>
+								<option value="SAVED">Введен</option>
+								<option value="EXECUTED">Исполнен</option>
+								<option value="REFUSED">Отказан</option>
+								<option value="RECALLED">Отозван</option>
+								<option value="ERROR">Платеж не может быть исполнен, необходимо обратиться в банк.</option>
+								<option value="DELAYED_DISPATCH">Ожидается обработка</option>
+								<option value="DISPATCHED">Обрабатывается</option>
+								<option value="INITIAL">Документ создан, но еще не сохранен</option>
+								<option value="WAIT_CONFIRM">Документ, ожидающий дополнительного подтверждения</option>
+								<option value="UNKNOW">Статус документа не известен</option>
+								<option value="SUCCESSED">Платеж успешно исполнен банком: денежные средства переведены на счет получателя платежа</option>
+								<option value="PARTLY_EXECUTED">Документ подтвержден и передан на обработку в банк</option>
+								<option value="SAVED_TEMPLATE">Сохраненный шаблон</option>
+								<option value="TEMPLATE">Подтвержденный шаблон</option>
+								<option value="WAIT_CONFIRM_TEMPLATE">Шаблон, ожидающий дополнительного подтверждения</option>
+								<option value="DELETED">Документ удален</option>
+								<option value="STATEMENT_READY">Заявка на получение выписки из ПФР готова к немедленному получению</option>
+								<option value="ADOPTED">Заявка принята</option>
+								<option value="OFFLINE_SAVED">Введен</option>
+								<option value="OFFLINE_DELAYED">Ожидается обработка</option>
+								<option value="BILLING_CONFIRM_TIMEOUT">Таймаут при подтверждении в биллинге</option>
+								<option value="ABS_RECALL_TIMEOUT">Таймаут при отзыве платежа в АБС</option>
+								<option value="INITIAL_LONG_OFFER">Частично заполнен</option>
+								<option value="BILLING_GATE_CONFIRM_TIMEOUT">Таймаут при подтверждении в биллинге</option>
+								<option value="ABS_GATE_RECALL_TIMEOUT">Таймаут при отзыве платежа в АБС</option>
+								<option value="WAIT_CLIENT_MESSAGE">Не полностью заполненный шаблон (черновик)</option>
+								<option value="SHOW_RECOMMENDATIONS">Специфичный для ПФП статус. Рекомендации по использованию кредитной карты.</option>
+								<option value="CHOOSE_CARD">Специфичный для ПФП статус. Эффект использования кредитной карты</option>
+								<option value="EDIT_RISK_PROFILE_FORM">Специфичный для ПФП статус. Заполнение ответов на вопросы для определения риск профиля</option>
+								<option value="SHOW_RISK_PROFILE_FORM">Специфичный для ПФП статус. Просмотр риск профиля клиентом</option>
+								<option value="EDIT_PERSON_PORTFOLIOS">Специфичный для ПФП статус. Формирование клиентских портфелей</option>
+								<option value="FINANCE_PLAN">Специфичный для ПФП статус. Финансовый прогноз</option>
+								<option value="COMPLITE">Специфичный для ПФП статус. Просмотр информации о прохождении ПФП</option>
+								<option value="COMPLITE_OLD">Специфичный для ПФП статус. Просмотр информации о прохождении ПФП</option>
+								<option value="INITIAL2">Черновик. Специфичный статус для расширенной заявки на кредит.</option>
+								<option value="INITIAL3">Черновик. Специфичный статус для расширенной заявки на кредит.</option>
+								<option value="INITIAL4">Черновик. Специфичный статус для расширенной заявки на кредит.</option>
+								<option value="INITIAL5">Черновик. Специфичный статус для расширенной заявки на кредит.</option>
+								<option value="INITIAL6">Черновик. Специфичный статус для расширенной заявки на кредит.</option>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Редактирование платежа." id="4.9.17">
+			<request name="Редактирование платежа." id="4.9.17.0">
+				<action url="http://psi-address/atm/private/payments/confirm.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="edit" text="Операция:edit"/>
+						<param type="text" required="true" name="id" value="" text="Id платежа."/>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Заявки на кредит LoanProduct" id="4.9.18">
+			<request name="Инициализация." id="4.9.18.1" service="LoanProduct" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/loan/claim.do" method="post">
+					<params>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+			<request name="Шаг выбора условий" id="4.9.18.2" service="LoanProduct" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/loan/loanProduct.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="next" text="Операция:next"/>
+						<param type="text" required="true" name="loanId" value="" text="Идентификатор выбранного условия."/>
+						<param type="text" required="true" name="changeDate" value="" text="Время последнего изменения условий в миллисекундах."/>
+					</params>
+				</action>
+			</request>
+			<request name="Оформление заявки" id="4.9.18.3" service="LoanProduct" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+						<param type="read" required="true" name="form" value="" text="form: Наименование формы из initialData"/>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.18.2" fill="true"/>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+			<request name="Получение текста согласия на обработку персональных данных" id="4.9.18.4" service="LoanProduct" requireUDBO="false">
+				<action url="http://psi-address/atm/private/loans/personal/agreement.do" method="post">
+					<params/>
+				</action>
+			</request>
+		</operation>
+		<operation name="Заявки на предодобренный кредит LoanOffer" id="4.9.19">
+			<request name="Инициализация." id="4.9.19.1" service="LoanOffer" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/loan/offerClaim.do" method="post">
+					<params>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+			<request name="Шаг выбора предодобренных условий" id="4.9.19.2" service="LoanOffer" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/loan/loanOffer.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="next" text="Операция:next"/>
+						<param type="text" required="true" name="loanId" value="" text="Идентификатор выбранного условия."/>
+					</params>
+				</action>
+			</request>
+			<request name="Оформление заявки" id="4.9.19.3" service="LoanOffer" requireUDBO="false">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+						<param type="read" required="true" name="form" value="" text="form: Наименование формы из initialData"/>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.19.2" fill="true"/>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+		</operation>
+		<operation name="Погашение кредита." id="4.9.20">
+			<operation name="Погашение кредита LoanPayment" id="4.9.20.1">
+				<request name="Инициализация платежа." id="4.9.20.1.1">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="LoanPayment" text="form:LoanPayment"/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Погашение кредита." id="4.9.20.1.2">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="read" required="true" name="form" value="LoanPayment" text="form:LoanPayment"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.20.1.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+			<operation name="Создание автоплатежа погашения кредита LoanPaymentLongOffer." id="4.9.20.2">
+				<request name="Инициализация платежа." id="4.9.20.2.1">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+							<param type="read" required="true" name="form" value="LoanPayment" text="form:LoanPayment"/>
+							<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+						</params>
+					</action>
+				</request>
+				<request name="Инициализация заявки на автоплатеж." id="4.9.20.2.2">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="makeLongOffer" text="Операция:makeLongOffer"/>
+							<param type="read" required="true" name="form" value="LoanPayment" text="form:LoanPayment"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.20.2.1" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+				<request name="Подключение автоплатежа." id="4.9.20.2.3">
+					<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+						<params>
+							<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+							<param type="show" required="true">
+								<list>
+									<option value="4.9.20.2.1"/>
+									<option value="4.9.20.2.2" fill="true"/>
+								</list>
+							</param>
+						</params>
+					</action>
+				</request>
+			</operation>
+		</operation>
+		<operation name="Заявка на изменение кредитного лимита." id="4.9.21">
+			<request name="Инициализация." id="4.9.21.1">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="init" text="Операция:init"/>
+						<param type="read" required="true" name="form" value="ChangeCreditLimitClaim" text="form:ChangeCreditLimitClaim"/>
+						<param type="text" required="false" name="transactionToken" value="" text="Токен транзакции данного платежа, если был получен ранее."/>
+					</params>
+				</action>
+			</request>
+			<request name="Согласие или отказ от нового кредитного лимита." id="4.9.21.2">
+				<action url="http://psi-address/atm/private/payments/payment.do" method="post">
+					<params>
+						<param type="read" required="true" name="operation" value="save" text="Операция:save"/>
+						<param type="read" required="true" name="form" value="ChangeCreditLimitClaim" text="form:ChangeCreditLimitClaim"/>
+						<param type="show" required="true">
+							<list>
+								<option value="4.9.21.1" fill="true"/>
+							</list>
+						</param>
+					</params>
+				</action>
+			</request>
+		</operation>
+	</operation>
+	<operation name="Справочники" id="4.10">
+		<request name="Справочник банков." id="4.10.1" service="BanksDictionary" requireUDBO="false">
+			<action url="http://psi-address/atm/private/dictionary/banks/national.do" method="post">
+				<params>
+					<param type="text" required="false" name="bic" value="" text="БИК."/>
+					<param type="text" required="false" name="city" value="" text="Город."/>
+					<param type="text" required="false" name="name" value="" text="Наименование банка."/>
+					<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+					<param type="text" required="false" name="paginationOffset" value="" text="Смещение относительно начала выборки."/>
+				</params>
+			</action>
+		</request>
+		<request name="Справочник валютных операций." id="4.10.2" service="OperationCodesDictionary" requireUDBO="false">
+			<action url="http://psi-address/atm/private/operationCodes.do" method="post">
+				<params>
+					<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+					<param type="text" required="false" name="paginationOffset" value="" text="Смещение относительно начала выборки."/>
+				</params>
+			</action>
+		</request>
+		<request name="Справочник регионов." id="4.10.3" service="RegionsDictionary" requireUDBO="false">
+			<action url="http://psi-address/atm/private/dictionary/regions.do" method="post">
+				<params>
+					<param type="text" required="false" name="parentId" value="" text="Идентификатор родителя. Если данный элемент отсутствует, то выборка производится относительно корня."/>
+				</params>
+			</action>
+		</request>
+		<operation name="Справочник поставщиков." id="4.10.4">
+			<request name="Справочник поставщиков." id="4.10.4.0" service="RurPayJurSB" requireUDBO="false">
+				<action url="http://psi-address/atm/private/dictionary/servicesPayments.do" method="post">
+					<params>
+						<param type="text" required="false" name="id" value="" text="Идентификатор категории или услуги."/>
+						<param type="choice">
+							<choice>
+								<param type="text" required="false" name="region" value="" text="Идентификатор региона."/>
+							</choice>
+							<choice>
+								<param type="text" required="false" name="regionGuid" value="" text="Кроссблочный идентификатор региона."/>
+							</choice>
+						</param>
+						<param type="bool" required="true" name="autoPaymentOnly" value="false" text="Признак, отвечающий за поиск по поставщикам, поддерживающим создание автоплатежа."/>
+						<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+						<param type="text" required="false" name="paginationOffset" value="" text="Размер результирующей выборки."/>
+					</params>
+				</action>
+			</request>
+			<request name="Получение списка услуг поставщика." id="4.10.4.1" service="RurPayJurSB" requireUDBO="false">
+				<action url="http://psi-address/atm/private/dictionary/providerServices.do" method="post">
+					<params>
+						<param type="text" required="true" name="id" value="" text="Идентификатор поставщика из справочника поставщиков"/>
+						<param type="text" required="false" name="providerGuid" value="" text="Кроссблочный идентификатор поставщика"/>
+						<param type="choice">
+							<choice>
+								<param type="text" required="false" name="region" value="" text="Идентификатор региона."/>
+							</choice>
+							<choice>
+								<param type="text" required="false" name="regionGuid" value="" text="Кроссблочный идентификатор региона."/>
+							</choice>
+						</param>
+					</params>
+				</action>
+			</request>
+			<request name="Популярные платежи." id="4.10.4.2" service="RurPayJurSB" requireUDBO="false">
+				<action url="http://psi-address/atm/private/dictionary/popularPayments.do" method="post">
+					<params>
+						<param type="choice">
+							<choice>
+								<param type="text" required="false" name="region" value="" text="Идентификатор региона."/>
+							</choice>
+							<choice>
+								<param type="text" required="false" name="regionGuid" value="" text="Кроссблочный идентификатор региона."/>
+							</choice>
+						</param>
+						<param type="list" required="false" name="type" text="Тип запрашиваемой информации">
+							<list>
+								<option value="service">Услуга</option>
+								<option value="provider">Поставщик</option>
+							</list>
+						</param>
+						<param type="text" required="false" name="paginationSize" value="" text="Размер результирующей выборки."/>
+						<param type="text" required="false" name="paginationOffset" value="" text="Размер результирующей выборки."/>
+					</params>
+				</action>
+			</request>
+		</operation>
+	</operation>
+	<operation name="Получение курсов валют" id="4.11">
+		<request name="Получение курсов валют" id="4.11.0" service="Rates" requireUDBO="false">
+			<action url="http://psi-address/atm/private/rates/list.do" method="post">
+				<params>
+					<param type="list" required="false" name="type" text="Тип курсов валют.">
+						<list>
+							<option value="">Пусто</option>						
+							<option value="currency">Валюта</option>
+							<option value="metal">Металл</option>
+						</list>
+					</param>
+				</params>
+			</action>
+		</request>
+	</operation>
+	<operation name="Получение изображения из базы данных" id="4.12">
+		<request name="Получение изображения из базы данных" id="4.12.0" requireUDBO="false">
+			<action url="http://psi-address/atm/images" method="post">
+				<params>
+					<param type="text" required="true" name="id" value="" text="Id картинки."/>
+				</params>
+			</action>
+		</request>
+	</operation>
+	<operation name="Права доступа" id="4.13">
+		<request name="Права доступа" id="4.13.0" service="Permissions" requireUDBO="false">
+			<action url="http://psi-address/atm/private/permissions.do" method="post">
+				<params>
+					<param type="bool" required="true" name="needCheckUDBO" value="true" text="Признак необходимости CEDBO запроса для проверки наличия УДБО."/>
+				</params>
+			</action>
+		</request>
+	</operation>
+	<operation name="Накопительные баллы «Спасибо»" id="4.14">
+		<request name="Накопительные баллы «Спасибо»" id="4.14.0" service="LoyaltyInternal" requireUDBO="false">
+			<action url="http://psi-address/atm/private/thanks.do" method="post">
+				<params/>
+			</action>
+		</request>
+	</operation>
+	<operation name="Предложения банка." id="4.15">
+		<request name="Предложения банка." id="4.15.0" service="Offers" requireUDBO="false">
+			<action url="http://psi-address/atm/private/loan/loanOffer/show.do" method="post">
+				<params>
+					<param type="bool" required="true" name="isLogin" value="false" text="Признак получения предложений на входе в приложение."/>
+					<param type="list" required="false" name="claimType" text="Признак того, какие предодобренные предложения надо отобразить.">
+						<list>
+							<option value="">Пусто</option>
+							<option value="card">По картам</option>
+							<option value="loan">По кредитам</option>
+						</list>
+					</param>
+				</params>
+			</action>
+		</request>
+	</operation>
+	<operation name="Список заявок на получение выписки ПФР" id="4.16">
+		<request name="Список заявок на получение выписки ПФР" id="4.16.0" service="PFRClaimsList" requireUDBO="false">
+			<action url="http://psi-address/atm/private/pfrClaims/list.do" method="post">
+				<params>
+					<param type="choice">
+						<choice>
+							<param type="text" required="false" name="from" value="" text="Дата начала построения списка заявок."/>
+							<param type="text" required="false" name="to" value="" text="Дата окончания построения списка заявок."/>
+						</choice>
+					</param>
+				</params>
+			</action>
+		</request>
+	</operation>
+	<operation name="Выписка из пенсионного фонда" id="4.17">
+		<request name="Выписка из пенсионного фонда" id="4.17.0" service="PFRStatement" requireUDBO="false">
+			<action url="http://psi-address/atm/private/pfr/statement.do" method="post">
+				<params>
+					<param type="text" required="false" name="claimId" value="" text="Идентификатор заявки."/>
+				</params>
+			</action>
+		</request>
+	</operation>
+	<operation name="Получение логина и пароля для входа в ЕРИБ" id="4.18">
+		<request name="Получение логина и пароля для входа в ЕРИБ" id="4.18.0" service="Registration" requireUDBO="false">
+			<action url="http://psi-address/atm/private/getregistration.do" method="post">
+				<params/>
+			</action>
+		</request>
+	</operation>
+	<operation name="Служебная информация в профиле клиента" id="4.19">
+		<request name="Получение сохраненной информации." id="4.19.1" service="ATMStorage" requireUDBO="false">
+			<action url="http://psi-address/atm/private/atm/serviceInfo.do" method="post">
+				<params/>
+			</action>
+		</request>
+		<request name="Сохранение информации в профиле клиента." id="4.19.2" service="ATMStorage" requireUDBO="false">
+			<action url="http://psi-address/atm/private/atm/serviceInfo.do" method="post">
+				<params>
+					<param type="read" required="true" name="operation" value="save" text="Операция"/>
+					<param type="text" required="true" name="data" value="" text="Данные, которые нужно сохранить в профиле, в виде строки длиной до 256 символов. Следует иметь в виду, что старые данные затираются."/>
+				</params>
+			</action>
+		</request>
+	</operation>
+</root>
