@@ -312,7 +312,7 @@ function Version(eribSpec) {
 
 var choiceAddr = [];
 function prepareChoiceAddr() {
-	choiceAddr = document.getElementById('settings').getElementsByClassName('option');
+	choiceAddr = getElementsByClassName(document.getElementById('settings'),'option');
 }
 
 function eribAddressConf() {

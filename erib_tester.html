@@ -5,6 +5,9 @@
 		<meta http-equiv="cache-control" content="no-cache"/>
 		<title>Тестер</title>
 		<style>
+			body {
+				margin-right:40px;
+			}
 			.settingsElement {
 				width:10%;
 				padding: 2px;
@@ -321,7 +324,7 @@
 	</head>
 	<body onload="loadXML();">
 		<h6 class="version" id="version" title="Проверялка протокола ЕРИБ"></h6>
-		<div onclick="toggleView()" id="switch">
+		<div onclick="toggleView()" id="switch" class="menu">
 			<img id="configIcon" src="btn_settings_hot.png" alt="config"/>
 			<span id='currentServer'></span>
 		</div>

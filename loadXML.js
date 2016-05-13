@@ -1,4 +1,130 @@
-﻿(function () {
+(function () {
+	try {
+		if (!XMLDocument.prototype.loadXML) {
+			XMLDocument.prototype.loadXML = function (xmlString) {
+				if (this === undefined || this === null)
+					throw new TypeError('"XMLDocument.prototype.loadXML" is NULL or not defined');
+				var childNodes = this.childNodes;
+				for (var i = childNodes.length - 1; i >= 0; i--)
+					this.removeChild(childNodes[i]);
+				 
+				var dp = new DOMParser();
+				var newDOM = dp.parseFromString(xmlString, "text/xml");
+				var newElt = this.importNode(newDOM.documentElement, true);
+				this.appendChild(newElt);
+			};
+		}
+
+		/*
+		if (!XMLDocument.prototype.children) {
+		XMLDocument.prototype.children = this.childNodes;
+		}
+
+		if (!Element.prototype.children) {
+		Element.prototype.children = this.childNodes;
+		}
+		 */
+	} catch (e) {}
+	// check for XPath implementation
+	if (document.implementation.hasFeature("XPath", "3.0")) {
+		// prototying the XMLDocument selectNodes
+		XMLDocument.prototype.selectNodes = function (cXPathString, xNode) {
+			if (!xNode) {
+				xNode = this;
+			}
+			var oNSResolver = this.createNSResolver(this.documentElement)
+				var aItems = this.evaluate(cXPathString, xNode, oNSResolver,
+					XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)
+				var aResult = [];
+			for (var i = 0; i < aItems.snapshotLength; i++) {
+				aResult[i] = aItems.snapshotItem(i);
+			}
+			return aResult;
+		}
+
+		// prototying the Element selectNodes
+		Element.prototype.selectNodes = function (cXPathString) {
+			if (this.ownerDocument.selectNodes) {
+				return this.ownerDocument.selectNodes(cXPathString, this);
+			} else {
+				throw "For XML Elements Only";
+			}
+		}
+
+		// prototying the XMLDocument selectSingleNode
+		XMLDocument.prototype.selectSingleNode = function (cXPathString, xNode) {
+			if (!xNode) {
+				xNode = this;
+			}
+			var xItems = this.selectNodes(cXPathString, xNode);
+			if (xItems.length > 0) {
+				return xItems[0];
+			} else {
+				return null;
+			}
+		}
+
+		// prototying the Element selectSingleNode
+		Element.prototype.selectSingleNode = function (cXPathString) {
+			if (this.ownerDocument.selectSingleNode) {
+				return this.ownerDocument.selectSingleNode(cXPathString, this);
+			} else {
+				throw "For XML Elements Only";
+			}
+		}
+	}
+
+	/*
+	if (!Element.prototype.selectNodes) {
+	Element.prototype.selectNodes = function (path) {
+	if (this === undefined || this === null)
+	throw new TypeError('"Element.prototype.selectNodes" is NULL or not defined');
+	var pathToTags = path.split('/');
+	var tagsCount = pathToTags.length;
+	var result=[];
+	result.push(this);
+	switch (pathToTags[0]) {
+	case '.':
+	for (var currentTag=1;currentTag<tagsCount;currentTag++) {
+	var tempRes=[];
+	for (var currentRes=0;currentRes<result.length;currentRes++)
+	tempRes = tempRes.concat(result[currentRes].getElementsByTagName(pathToTags[currentTag]));
+	var tempElements=[];
+	for (var tempT=0;tempT<tempRes.length;tempT++)
+	tempElements.push(tempRes[tempT].children);
+	result = tempElements;
+	}
+	break;
+	case '..':
+	for (var currentTag=1;currentTag<tagsCount;currentTag++) {
+	for (var currentRes=0;currentRes<result.length;currentRes++)
+	tempRes = tempRes.concat(result[currentRes].getElementsByTagName(pathToTags[currentTag]));
+	var tempElements=[];
+	for (var tempT=0;tempT<tempRes.length;tempT++)
+	tempElements.push(tempRes[tempT]);
+	result = tempElements;
+	}
+	break;
+	default:
+	for (var currentTag=1;currentTag<tagsCount;currentTag++) {
+	result = result[0].getElementsByTagName(pathToTags[currentTag]);
+	}
+	}
+	return result;
+	};
+	}
+	 */
+	if (!Element.prototype.getAttribute) {
+		Element.prototype.getAttribute = function (attrName) {
+			if (this === undefined || this === null)
+				throw new TypeError('"Element.prototype.getAttribute" is NULL or not defined');
+			var attributes = this.attributes;
+			var attributesCount = attributes.length;
+			var result = attributes.getNamedItem(attrName);
+			return result;
+		};
+	}
+
 	if (!Array.prototype.indexOf) {
 		Array.prototype.indexOf = function (searchElement, fromIndex) {
 			if (this === undefined || this === null)
@@ -175,65 +301,64 @@
 	}
 })();
 
-var scriptVersion = "2.0.03";
+var scriptVersion = "2.1.00";
 
-function getXMLObject(probablyXML, isFile) {
-	//console.log('getXMLObject(probablyXML:'+probablyXML+', isFile: ' + isFile + ')');
+function getXMLObject(probablyXML, isText) {
+	//console.log('getXMLObject(probablyXML:' + probablyXML + ', isText: ' + isText + ')');
 	try {
-	if (isFile) {
-		result = new ActiveXObject("Microsoft.XMLDOM");
-		result.async = false;
-		result.load(probablyXML);
-		return result;
-	}
-	else {
-		try {
-			var result;
-			var tryAgain = true;
-			if (probablyXML.responseXML) {
-				if (probablyXML.responseXML.childNodes.length > 0) {
-					if (probablyXML.responseXML.documentElement.nodeName === "parsererror") {
-						result = {
-							parseError : {
-								errorCode : 1,
-								reason : probablyXML.responseXML.documentElement.childNodes[0].nodeValue
-							}
-						};
-					} else {
-						result = probablyXML.responseXML;
-					}
-					tryAgain = false;
-				}
-			}
-			if (tryAgain) {
-				result = new ActiveXObject("Microsoft.XMLDOM");
-				result.async = false;
-				result.loadXML(probablyXML.responseText);
-			}
-		} catch (err) {
-			//console.warn('getXMLObject: '+err.description);
-			result = {
-				parseError : {
-					errorCode : 1
-				}
-			};
-		}
-		finally {
+		if (isText) {
+			result = new XMLDocument();
+			result.load(probablyXML);
 			return result;
+		} else {
+			try {
+				var result;
+				var tryAgain = true;
+
+				if (probablyXML.responseXML && probablyXML.responseXML.documentElement) {
+					var children = (probablyXML.responseXML.children || probablyXML.responseXML.childNodes);
+					if (children.length > 0) {
+						if (probablyXML.responseXML.documentElement.nodeName === "parsererror") {
+							result = {
+								parseError : {
+									errorCode : 1,
+									reason : probablyXML.responseXML.documentElement.childNodes[0].nodeValue
+								}
+							};
+						} else {
+							result = probablyXML.responseXML;
+						}
+						tryAgain = false;
+					}
+				}
+
+				if (tryAgain) {
+					result = getXMLObject(probablyXML.responseText, true);
+				}
+			} catch (err) {
+				//console.warn('getXMLObject: ' + err.description);
+				result = {
+					parseError : {
+						errorCode : 1,
+						reason : err.description
+					}
+				};
+			}
+			finally {
+				return result;
+			}
 		}
-	}
-	}
-	catch (e) {
-		//console.warn('getXMLObject: ' + e.description);		
+	} catch (e) {
+		//console.warn('getXMLObject: ' + e.description);
 	}
 }
 
 function loadXML() {
 	//console.log('loadXML()');
 	var newhttp = getXMLHttp();
-	newhttp.open('GET', 'file:///C:/Users/Natali/Documents/GitHub/URIB-tester/erib_Protocol.xml', true);
+	newhttp.open('GET', 'erib_Protocol.xml', false);
 	newhttp.send();
-	result = newhttp.responseText;
+	result = newhttp;
 	var docXML = getXMLObject(result);
 	var errorXMLParser = "";
 	try {
@@ -242,8 +367,9 @@ function loadXML() {
 	} catch (err) {
 		//console.warn('loadXML(): Error:: ' + err.description);
 		try {
+			var children = (docXML.documentElement.children || docXML.documentElement.childNodes)
 			if (docXML.documentElement.nodeName === "parsererror")
-				errorXMLParser = docXML.documentElement.childNodes[0].nodeValue;
+				errorXMLParser = children[0].nodeValue;
 		} catch (e) {
 			//console.warn('loadXML(): Error:: ' + e.description);
 			errorXMLParser = "Fatal error. Could not parse XML.";
@@ -251,26 +377,26 @@ function loadXML() {
 	}
 	if (errorXMLParser.isEmpty()) {
 		/* */
-		var newSettings='';
+		var newSettings = '';
 		var settings = docXML.documentElement.selectNodes('./settings');
 		var settingsLength = settings.length;
-		for (var current=0;current<settingsLength;current++){
+		for (var current = 0; current < settingsLength; current++) {
 			var currentSetting = settings[current];
 			var divSetting = buildSettings(currentSetting);
-			newSettings+=divSetting.outerHTML;
+			newSettings += divSetting.outerHTML;
 		}
 		var globalSettings = document.getElementById('settings');
 		globalSettings.innerHTML = newSettings;
 		/* */
 		var operations = docXML.documentElement.selectNodes('./operation');
 		var operationsLength = operations.length;
-		var newMenu=''
-		for (var currentOp=0;currentOp<operationsLength;currentOp++){
-			var currentOperation = operations[currentOp];
-			var divMenu = buildMenu(currentOperation);
-			newMenu+=divMenu.outerHTML;
-		}
-		var globalDiv = document.getElementById('operations');
+		var newMenu = ''
+			for (var currentOp = 0; currentOp < operationsLength; currentOp++) {
+				var currentOperation = operations[currentOp];
+				var divMenu = buildMenu(currentOperation);
+				newMenu += divMenu.outerHTML;
+			}
+			var globalDiv = document.getElementById('operations');
 		globalDiv.innerHTML = newMenu;
 		if (document.getElementById("useStatus").checked) {
 			getCards();
@@ -299,13 +425,13 @@ function buildMenu(operation) {
 	var txtClass = document.createAttribute('class');
 	txtClass.value = 'description operations';
 	spanTxt.setAttributeNode(txtClass);
-    
+
 	var input = document.createElement('input');
 	var inpName = document.createAttribute('name');
 	var inpClass = document.createAttribute('class');
-	inpName.value = op_id
-	inpClass.value='ignore';
-	
+	inpName.value = op_id;
+	inpClass.value = 'ignore';
+
 	input.type = 'checkbox';
 	input.setAttributeNode(inpName);
 	input.setAttributeNode(inpClass);
@@ -314,35 +440,33 @@ function buildMenu(operation) {
 	} else {
 		input.attachEvent("onclick", toggleChildren);
 	}
-	
-	
-	
+
 	var inpClick = document.createAttribute('onclick');
-	inpClick.value = 'toggleChildren("' + op_id + '");'
+	inpClick.value = 'toggleChildren("' + op_id + '");';
 	div.setAttributeNode(inpClick);
-	
+
 	attName.value = op_name;
 	attId.value = op_id;
 	div.setAttributeNode(attName);
 	div.setAttributeNode(attId);
 	div.appendChild(input);
 	div.appendChild(spanTxt);
-	var innerChildren = operation.childNodes;
+	var innerChildren = (operation.children || operation.childNodes);
 	var childrenLength = innerChildren.length;
-	for (var child=0;child<childrenLength;child++) {
-		var inner = innerChildren.item(child);
-		if (inner.baseName==='operation') {
+	for (var child = 0; child < childrenLength; child++) {
+		var inner = innerChildren[child];
+		if (inner.nodeName === 'operation') {
 			var innerDiv = buildMenu(inner);
-			innerDiv.style.display='none';
+			innerDiv.style.display = 'none';
 			div.appendChild(innerDiv);
 		}
-		if (inner.baseName==='request') {
+		if (inner.nodeName === 'request') {
 			var innerRequest = buildRequest(inner);
-			innerRequest.style.display='none';
+			innerRequest.style.display = 'none';
 			div.appendChild(innerRequest);
 		}
 	}
-	
+
 	return div;
 }
 
@@ -351,15 +475,17 @@ function buildRequest(request) {
 	var req_name = request.getAttribute('name');
 	var req_id = request.getAttribute('id');
 	//console.log('buildRequest(request [' + req_id + '::' + req_name + '])');
-	
-	var needUDBO = (request.getAttribute('requireUDBO')==="true");
+
+	var needUDBO = (request.getAttribute('requireUDBO') === "true");
 	var permissions = request.getAttribute('service');
-	if (needUDBO) permissions+= " needUDBO"
+	if (needUDBO)
+		permissions += " needUDBO";
 	var form = document.createElement('form');
-	
+
 	var action = request.selectNodes('./action')[0];
-	var params = action.selectNodes('./params')[0].childNodes;
-	
+	var tParams = action.selectNodes('./params')[0];
+	var params = (tParams.children || tParams.childNodes);
+
 	var attCharset = document.createAttribute('accept-charset');
 	var attName = document.createAttribute('name');
 	var attId = document.createAttribute('id');
@@ -368,32 +494,33 @@ function buildRequest(request) {
 	var checkBox = document.createElement('input');
 	var inpName = document.createAttribute('name');
 	var inpClass = document.createAttribute('class');
-	inpName.value = req_id
-	inpClass.value='ignore';
-	
+	inpName.value = req_id;
+	inpClass.value = 'ignore';
+
 	checkBox.type = 'checkbox';
 	checkBox.setAttributeNode(inpName);
 	checkBox.setAttributeNode(inpClass);
-	
+
 	attCharset.value = 'UTF-8';
 	attName.value = req_name;
 	attId.value = req_id;
 	attAction.value = action.getAttribute('url');
-	
+
 	var paramsLength = params.length;
-	for (var par=0;par<paramsLength;par++){
+	for (var par = 0; par < paramsLength; par++) {
 		var br = document.createElement('br');
 		var curParam = params[par];
 		var input = fillDiv(curParam, req_id);
-		for (var x=0;x<input.length;x++) form.appendChild(input[x]);
+		for (var x = 0; x < input.length; x++)
+			form.appendChild(input[x]);
 		form.appendChild(br);
 	}
 	var submit = document.createElement('input');
-	submit.type='button';
+	submit.type = 'button';
 
 	var submitClick = document.createAttribute('onclick');
 	submitClick.value = 'trySubmit("' + req_id + '");'
-	submit.setAttributeNode(submitClick);
+		submit.setAttributeNode(submitClick);
 
 	var submitValue = document.createAttribute('value');
 	submitValue.value = 'Выполнить запрос';
@@ -404,8 +531,8 @@ function buildRequest(request) {
 	submit.setAttributeNode(submitClass);
 
 	var formClass = document.createAttribute('class');
-	formClass.value='border description form';
-	
+	formClass.value = 'border description form';
+
 	var txtNode = document.createTextNode(' ' + req_id + ' ' + req_name);
 
 	var spanTxt = document.createElement('span');
@@ -413,7 +540,7 @@ function buildRequest(request) {
 	var txtClass = document.createAttribute('class');
 	txtClass.value = 'description request ' + permissions;
 	spanTxt.setAttributeNode(txtClass);
-	
+
 	form.setAttributeNode(attCharset);
 	form.setAttributeNode(attName);
 	form.setAttributeNode(attId);
@@ -421,14 +548,14 @@ function buildRequest(request) {
 	form.setAttributeNode(formClass)
 	form.method = action.getAttribute('method');
 	form.appendChild(submit);
-	
+
 	formDiv.appendChild(checkBox);
 	formDiv.appendChild(spanTxt);
-	form.style.display='none';
-	formDiv.appendChild(form);	
-	
+	form.style.display = 'none';
+	formDiv.appendChild(form);
+
 	var inpClick = document.createAttribute('onclick');
-	inpClick.value = 'toggleChildren("' + req_id + '", true);'
+	inpClick.value = 'toggleChildren("' + req_id + '", true);';
 	formDiv.setAttributeNode(inpClick);
 
 	return formDiv;
@@ -437,23 +564,25 @@ function buildRequest(request) {
 function createShow(param) {
 	var options = param.selectNodes('./list/option');
 	var optionsLength = options.length;
-	var id='', name=[];
-	for (var opt=0;opt<optionsLength;opt++){
-		var value = options.item(opt).getAttribute('value') + '.next';
-		var fill = (options.item(opt).getAttribute('fill')==='true');
-		if (fill) id=value;
+	var id = '',
+	name = [];
+	for (var opt = 0; opt < optionsLength; opt++) {
+		var value = options[opt].getAttribute('value') + '.next';
+		var fill = (options[opt].getAttribute('fill') === 'true');
+		if (fill)
+			id = value;
 		name.push(value);
 	}
 	var showDiv = document.createElement('div');
 	var classshow = document.createAttribute('class');
 	var nameshow = document.createAttribute('name');
 	var idshow = document.createAttribute('id');
-	
+
 	classshow.value = 'border showresult';
 	nameshow.value = name.join(' ');
 	idshow.value = id;
 	//console.log('createShow(param [' + id + '::' + name + '])');
-	
+
 	showDiv.setAttributeNode(classshow);
 	showDiv.setAttributeNode(nameshow);
 	showDiv.setAttributeNode(idshow);
@@ -461,19 +590,19 @@ function createShow(param) {
 }
 
 function createInput(param, type, req_id) {
-	var required = (param.getAttribute('required')==='true');
-	var classValue='';
+	var required = (param.getAttribute('required') === 'true');
+	var classValue = '';
 
 	var input = document.createElement('input');
 	var inpValue = document.createAttribute('value');
-	
+
 	var inpText = document.createTextNode(param.getAttribute('text'));
 	var inpClass = document.createAttribute('class');
-	
+
 	var spanTxt = document.createElement('span');
 	spanTxt.appendChild(inpText);
 	if (req_id) {
-		var inpName = document.createAttribute('name');		
+		var inpName = document.createAttribute('name');
 		var txtClass = document.createAttribute('class');
 		txtClass.value = 'description postdata';
 		spanTxt.setAttributeNode(txtClass);
@@ -482,39 +611,38 @@ function createInput(param, type, req_id) {
 		var txtClass = document.createAttribute('class');
 		txtClass.value = 'settingsElement';
 		classValue = 'settingsElement'
-		inpClass.value = classValue;
+			inpClass.value = classValue;
 		spanTxt.setAttributeNode(txtClass);
 	}
-	
+
 	input.type = 'text';
-	
+
 	inpValue.value = param.getAttribute('value');
 	inpName.value = param.getAttribute('name');
 
 	input.setAttributeNode(inpValue);
 	input.setAttributeNode(inpName);
 
-	if (type=='bool') {
+	if (type == 'bool') {
 		input.type = 'checkbox';
-		inpClass.value=classValue + ' ignore readonly';
+		inpClass.value = classValue + ' ignore readonly';
 	}
 
-	if (type=='read') {
-		inpClass.value=classValue + ' readonly';
+	if (type == 'read') {
+		inpClass.value = classValue + ' readonly';
 	}
 
 	input.setAttributeNode(inpClass);
-	//console.log('createInput(param [' +  param.getAttribute('name') + '::' + param.getAttribute('text') + '])');
+	//console.log('createInput(param [' + param.getAttribute('name') + '::' + param.getAttribute('text') + '])');
 	return [input, spanTxt];
 }
 
 function createList(param, req_id) {
-	var required = (param.getAttribute('required')==='true');
+	var required = (param.getAttribute('required') === 'true');
 	var newSelect = document.createElement('select');
 	if (req_id) {
 		var selectName = document.createAttribute('name');
-	}
-	else {
+	} else {
 		var selectName = document.createAttribute('id');
 		var selectClass = document.createAttribute('class');
 		selectClass.value = 'settingsElement';
@@ -522,90 +650,91 @@ function createList(param, req_id) {
 	}
 	selectName.value = param.getAttribute('name');
 	newSelect.setAttributeNode(selectName);
-	newSelect.onselect = function onselect(event){
+	newSelect.onselect = function onselect(event) {
 		//console.log(selectName.value + 'onselect');
 	}
 	var options = param.selectNodes('./list/option');
 	var optionsLength = options.length;
-	for (var opt=0;opt<optionsLength;opt++){
+	for (var opt = 0; opt < optionsLength; opt++) {
 		var newOption = document.createElement('option');
-		var text = options.item(opt).text;
-		var value = options.item(opt).getAttribute('value');
+		var text = options[opt].text || options[opt].textContent;
+		var value = options[opt].getAttribute('value');
 		newOption.text = text + ' [' + value + ']';
 		newOption.value = value;
 		newSelect.add(newOption);
 	}
-	//console.log('createList(param [' +  param.getAttribute('name') + '])');
+	//console.log('createList(param [' + param.getAttribute('name') + '])');
 	return newSelect;
 }
 
 function createChoice(param, req_id) {
-	var required = (param.getAttribute('required')==='true');
+	var required = (param.getAttribute('required') === 'true');
 	var choiceDiv = document.createElement('div');
 	var classChoice = document.createAttribute('class');
-	classChoice.value='choice';
+	classChoice.value = 'choice';
 	choiceDiv.setAttributeNode(classChoice);
-	
+
 	var choices = param.selectNodes('./choice');
 	var choicesLength = choices.length;
-	for (var choice=0;choice<choicesLength;choice++){
+	for (var choice = 0; choice < choicesLength; choice++) {
 		var optionDiv = document.createElement('div');
 		var classOption = document.createAttribute('class');
-		classOption.value='option';
+		classOption.value = 'option';
 		optionDiv.setAttributeNode(classOption);
-		var params = choices.item(choice).childNodes;
+		var params = (choices[choice].children || choices[choice].childNodes);
 		var paramsLength = params.length;
-		for (var par=0;par<paramsLength;par++){
-			var br = document.createElement('br');		
+		for (var par = 0; par < paramsLength; par++) {
+			var br = document.createElement('br');
 			var curParam = params[par];
 			var input = fillDiv(curParam, req_id);
-			for (var x=0;x<input.length;x++) optionDiv.appendChild(input[x]);
+			for (var x = 0; x < input.length; x++)
+				optionDiv.appendChild(input[x]);
 			optionDiv.appendChild(br);
 		}
 		choiceDiv.appendChild(optionDiv);
 	}
-	//console.log('createChoice(param, req_id [' +  req_id + '])');
+	//console.log('createChoice(param, req_id [' + req_id + '])');
 	return choiceDiv;
 }
 
-function fillDiv(curParam, req_id){
+function fillDiv(curParam, req_id) {
 	var type = curParam.getAttribute('type');
-	var required = (curParam.getAttribute('required')==='true');
+	var required = (curParam.getAttribute('required') === 'true');
 	var input = [];
 	var spanTxt = document.createElement('span');
-	var pushSpan=false;
-	var pushInput=[];
+	var pushSpan = false;
+	var pushInput = [];
 	switch (type) {
-		case 'choice':
-			pushInput.push(createChoice(curParam, req_id));
+	case 'choice':
+		pushInput.push(createChoice(curParam, req_id));
 		break;
-		case 'list':
-			pushInput.push(createList(curParam, req_id));
-			var inpText = document.createTextNode(curParam.getAttribute('text'));
-			spanTxt.appendChild(inpText);
-			if (req_id) {
-				var txtClass = document.createAttribute('class');
-				txtClass.value = 'description postdata';
-				spanTxt.setAttributeNode(txtClass);
-			}
-			pushInput.push(spanTxt);
+	case 'list':
+		pushInput.push(createList(curParam, req_id));
+		var inpText = document.createTextNode(curParam.getAttribute('text'));
+		spanTxt.appendChild(inpText);
+		if (req_id) {
+			var txtClass = document.createAttribute('class');
+			txtClass.value = 'description postdata';
+			spanTxt.setAttributeNode(txtClass);
+		}
+		pushInput.push(spanTxt);
 		break;
-		case 'show':
-			pushInput.push(createShow(curParam));
+	case 'show':
+		pushInput.push(createShow(curParam));
 		break;
-		default:
-			pushInput = createInput(curParam, type, req_id);
+	default:
+		pushInput = createInput(curParam, type, req_id);
 	}
-	var notRequired = ['bool','show','choice'];
-	if (!required && (notRequired.indexOf(type)===-1)) {
-		//console.log('fillDiv(curParam [' + curParam.getAttribute('text') + ', req_id [' +  req_id + ']) :: OPTIONAL');
+	var notRequired = ['bool', 'show', 'choice'];
+	if (!required && (notRequired.indexOf(type) === -1)) {
+		//console.log('fillDiv(curParam [' + curParam.getAttribute('text') + ', req_id [' + req_id + ']) :: OPTIONAL');
 		var optionalCheck = document.createElement('input');
 		optionalCheck.type = 'checkbox';
-		
+
 		var optClass = document.createAttribute('class');
 		optClass.value = 'ignore readonly';
 		optionalCheck.setAttributeNode(optClass);
-		
+
 		var optName = document.createAttribute('name');
 		var attrName = '';
 		if (req_id) {
@@ -615,7 +744,7 @@ function fillDiv(curParam, req_id){
 		}
 		optName.value = attrName;
 		optionalCheck.setAttributeNode(optName);
-		
+
 		var optValue = document.createAttribute('value');
 		var attrValue = '';
 		if (req_id) {
@@ -628,58 +757,59 @@ function fillDiv(curParam, req_id){
 
 		pushInput[0].setAttribute('id', attrValue);
 		var optionalclass = pushInput[0].getAttribute('class');
-		optionalclass+=" optionaldiv";
+		optionalclass += " optionaldiv";
 		pushInput[0].setAttribute('class', optionalclass);
 		pushInput[0].removeAttribute('name');
 		pushInput.unshift(optionalCheck);
-		
+
 		/*
 		var divOptional = document.createElement('span');
 		var divClass = document.createAttribute('class');
 		divClass.value = 'optionaldiv';
 		divOptional.setAttributeNode(divClass);
 		for (var element=0;element<pushInput.length;element++) {
-			divOptional.appendChild(pushInput[element]);
+		divOptional.appendChild(pushInput[element]);
 		}
 		pushInput=[];
 		pushInput.push(divOptional);
-		*/
+		 */
 	} else {
-		//console.log('fillDiv(curParam [' + curParam.getAttribute('text') + ', req_id [' +  req_id + '])');
+		//console.log('fillDiv(curParam [' + curParam.getAttribute('text') + ', req_id [' + req_id + '])');
 	}
 	return pushInput;
 }
 
-function toggleChildren(divId, isForm){
-	//console.log('toggleChildren('+divId+', isForm:' + isForm +')');
+function toggleChildren(divId, isForm) {
+	//console.log('toggleChildren(' + divId + ', isForm:' + isForm + ')');
 	var currentDiv = document.getElementById(divId);
 	var showIt = 'none';
 	var divChildren = [];
-	
+
 	if (isForm) {
-		var input = currentDiv.parentElement.childNodes[0];
+		var children = (currentDiv.parentElement.children || currentDiv.parentElement.childNodes);
+		var input = children[0];
 		divChildren.push(currentDiv);
-	}
-	else {
-		var input = currentDiv.childNodes[0];
-		var divChildren = currentDiv.childNodes;
+	} else {
+		var children = (currentDiv.children || currentDiv.childNodes);
+		var input = children[0];
+		var divChildren = children;
 	}
 	if (input.checked) {
 		showIt = 'block';
 	}
 	var childCount = divChildren.length;
-	var myTags = ['DIV','FORM'];
-	for (var child=0;child<childCount;child++) {
-		var tryIt = (divChildren[child].nodeType===1 && (myTags.indexOf(divChildren[child].tagName)!==-1));
-		if (tryIt) 
+	var myTags = ['DIV', 'FORM'];
+	for (var child = 0; child < childCount; child++) {
+		var tryIt = (divChildren[child].nodeType === 1 && (myTags.indexOf(divChildren[child].tagName) !== -1));
+		if (tryIt)
 			divChildren[child].style.display = showIt;
 	}
-	//console.log('toggleChildren('+ divId + ' ' + input.checked + ')');
-	
+	//console.log('toggleChildren(' + divId + ' ' + input.checked + ')');
+
 }
 
 function getXMLHttp(existingConn) {
-	//console.log('getXMLHttp(existingConn:'+existingConn+')');
+	//console.log('getXMLHttp(existingConn:' + existingConn + ')');
 	var xmlHttp = existingConn;
 	//For Mozila, Opera and WebKit Browsers
 	if (!xmlHttp && typeof(XMLHttpRequest) !== 'undefined') {
@@ -710,30 +840,31 @@ function getXMLHttp(existingConn) {
 
 function buildSettings(setting) {
 	var div = document.createElement('div');
-	
+
 	var divClass = document.createAttribute('class');
-	divClass.value='settings';
+	divClass.value = 'settings';
 	div.setAttributeNode(divClass);
-	
+
 	var paramBlocks = setting.selectNodes('./params');
 	var blocksLength = paramBlocks.length;
-	for (var currentBlock=0;currentBlock<blocksLength;currentBlock++) {
+	for (var currentBlock = 0; currentBlock < blocksLength; currentBlock++) {
 		var br = document.createElement('div');
 		var params = paramBlocks[currentBlock].selectNodes('./param');
 		var paramsLength = params.length;
-		for (var par=0;par<paramsLength;par++){
-			var curParam=params[par];
+		for (var par = 0; par < paramsLength; par++) {
+			var curParam = params[par];
 			var input = fillDiv(curParam);
-			for (var x=0;x<input.length;x++) br.appendChild(input[x]);
-		}		
+			for (var x = 0; x < input.length; x++)
+				br.appendChild(input[x]);
+		}
 		div.appendChild(br);
 	}
 	return div;
 }
 
 var divChoices = [];
-function prepareDivChoce() {
-		divChoices = getElementsByClassName(document, "choice");
+function prepareDivChoice() {
+	divChoices = getElementsByClassName(document, "choice");
 }
 
 function divChoice() {
@@ -744,12 +875,12 @@ function divChoice() {
 		for (var n = 0; n < divOptions.length; n++) {
 			(function (n) {
 				var currentOption = divOptions[n];
-				currentOption.addEventListener('mouseover', function(event) {
+				currentOption.addEventListener('mouseover', function (event) {
 					addClass(currentOption, "choose1");
-				},false);
-				currentOption.addEventListener('mouseleave', function(event) {
+				}, false);
+				currentOption.addEventListener('mouseleave', function (event) {
 					delClass(currentOption, "choose1");
-				},true);
+				}, true);
 			})(n);
 
 			var checkedOptions = getElementsByClassName(divOptions[n], "ignore");
@@ -816,7 +947,7 @@ function divChoice() {
 }
 
 function addClass(element, class2Add) {
-	//console.log('addClass(element:'+element+', class2Add:'+class2Add+')');
+	//console.log('addClass(element:' + element + ', class2Add:' + class2Add + ')');
 	var currentClassName = element.className;
 	if ((currentClassName !== null) && currentClassName.indexOf(class2Add) === -1) {
 		if ((currentClassName === "")) {
@@ -828,7 +959,7 @@ function addClass(element, class2Add) {
 }
 
 function delClass(element, class2Del) {
-	//console.log('delClass(element:'+element+', class2Del:'+class2Del+')');
+	//console.log('delClass(element:' + element + ', class2Del:' + class2Del + ')');
 	var classValues = element.className.split(" ");
 	var indexOfClass = classValues.indexOf(trim(class2Del));
 	if (indexOfClass !== -1) {
@@ -838,13 +969,16 @@ function delClass(element, class2Del) {
 }
 
 function getElementsByClassName(htmlDocument, className) {
-	//console.log('getElementsByClassName(htmlDocument:'+htmlDocument+', className:'+className+')');
+	//console.log('getElementsByClassName(htmlDocument:' + htmlDocument + ', className:' + className + ')');
 	var result = [];
+	if (htmlDocument.getElementsByClassName)
+		return htmlDocument.getElementsByClassName(className);
+
 	var tables = htmlDocument.getElementsByTagName("*");
 	for (var i = 0; i < tables.length; i++) {
-		if (tables[i].className.contains(className))
+		var classArr = tables[i].className.split(' ');
+		if (classArr.indexOf(className) !== -1)
 			result.push(tables[i]);
 	}
 	return result;
 }
-
