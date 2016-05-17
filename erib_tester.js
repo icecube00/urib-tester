@@ -1,194 +1,25 @@
-﻿(function () {
-	if (!Array.prototype.indexOf) {
-		Array.prototype.indexOf = function (searchElement, fromIndex) {
-			if (this === undefined || this === null)
-				throw new TypeError('"Array.prototype.indexOf" is NULL or not defined');
-			var length = this.length >>> 0; //Convert object.length to UInt32
-			//alert(searchElement.constructor.toString());
-			fromIndex = +fromIndex || 0;
-			if (Math.abs(fromIndex) === Infinity)
-				fromIndex = 0;
-			if (fromIndex < 0) {
-				fromIndex += length;
-				if (fromIndex < 0) {
-					fromIndex = 0;
-				}
-			}
-			for (; fromIndex < length; fromIndex++) {
-				if (this[fromIndex] === searchElement)
-					return fromIndex;
-			}
-			return -1;
-		};
-	};
-	if (!Array.prototype.isEmpty) {
-		Array.prototype.isEmpty = function () {
-			if (this === undefined || this === null)
-				throw new TypeError('"Array.prototype.isEmpty" is NULL or not defined');
-			if (this.length < 1)
-				return true;
-			return false;
-		};
-	}
-	if (!String.prototype.contains) {
-		String.prototype.contains = function (searchString) {
-			if (this === undefined || this === null)
-				throw new TypeError('"String.prototype.contains" is NULL or not defined');
-			if (this.indexOf(searchString) !== -1)
-				return true;
-			return false;
-		};
-	}
-	if (!String.prototype.isEmpty) {
-		String.prototype.isEmpty = function () {
-			if (this === undefined || this === null)
-				throw new TypeError('"String.prototype.isEmpty" is NULL or not defined');
-			if (this.length < 1)
-				return true;
-			return false;
-		};
-	}
-	if (!String.prototype.repeat) {
-		String.prototype.repeat = function (count) {
-			'use strict';
-			if (this == null) {
-				throw new TypeError('can\'t convert ' + this + ' to object');
-			}
-			var str = '' + this;
-			count = +count;
-			if (count != count) {
-				count = 0;
-			}
-			if (count < 0) {
-				throw new RangeError('repeat count must be non-negative');
-			}
-			if (count == Infinity) {
-				throw new RangeError('repeat count must be less than infinity');
-			}
-			count = Math.floor(count);
-			if (str.length == 0 || count == 0) {
-				return '';
-			}
-			// Ensuring count is a 31-bit integer allows us to heavily optimize the
-			// main part. But anyway, most current (August 2014) browsers can't handle
-			// strings 1 << 28 chars or longer, so:
-			if (str.length * count >= 1 << 28) {
-				throw new RangeError('repeat count must not overflow maximum string size');
-			}
-			var rpt = '';
-			for (; ; ) {
-				if ((count & 1) == 1) {
-					rpt += str;
-				}
-				count >>>= 1;
-				if (count == 0) {
-					break;
-				}
-				str += str;
-			}
-			// Could we try:
-			// return Array(count + 1).join(this);
-			return rpt;
-		}
-	}
-	if (!Event.prototype.preventDefault) {
-		Event.prototype.preventDefault = function () {
-			this.returnValue = false;
-		};
-	}
-	if (!Event.prototype.stopPropagation) {
-		Event.prototype.stopPropagation = function () {
-			this.cancelBubble = true;
-		};
-	}
-	if (!Element.prototype.addEventListener) {
-		var eventListeners = [];
-
-		var addEventListener = function (type, listener /*, useCapture (will be ignored) */
-		) {
-			var self = this;
-			var wrapper = function (e) {
-				e.target = e.srcElement;
-				e.currentTarget = self;
-				if (typeof listener.handleEvent != 'undefined') {
-					listener.handleEvent(e);
-				} else {
-					listener.call(self, e);
-				}
-			};
-			if (type == "DOMContentLoaded") {
-				var wrapper2 = function (e) {
-					if (document.readyState == "complete") {
-						wrapper(e);
-					}
-				};
-				document.attachEvent("onreadystatechange", wrapper2);
-				eventListeners.push({
-					object : this,
-					type : type,
-					listener : listener,
-					wrapper : wrapper2
-				});
-
-				if (document.readyState == "complete") {
-					var e = new Event();
-					e.srcElement = window;
-					wrapper2(e);
-				}
-			} else {
-				this.attachEvent("on" + type, wrapper);
-				eventListeners.push({
-					object : this,
-					type : type,
-					listener : listener,
-					wrapper : wrapper
-				});
-			}
-		};
-		var removeEventListener = function (type, listener /*, useCapture (will be ignored) */
-		) {
-			var counter = 0;
-			while (counter < eventListeners.length) {
-				var eventListener = eventListeners[counter];
-				if (eventListener.object == this && eventListener.type == type && eventListener.listener == listener) {
-					if (type == "DOMContentLoaded") {
-						this.detachEvent("onreadystatechange", eventListener.wrapper);
-					} else {
-						this.detachEvent("on" + type, eventListener.wrapper);
-					}
-					eventListeners.splice(counter, 1);
-					break;
-				}
-				++counter;
-			}
-		};
-		Element.prototype.addEventListener = addEventListener;
-		Element.prototype.removeEventListener = removeEventListener;
-		if (HTMLDocument) {
-			HTMLDocument.prototype.addEventListener = addEventListener;
-			HTMLDocument.prototype.removeEventListener = removeEventListener;
-		}
-		if (Window) {
-			Window.prototype.addEventListener = addEventListener;
-			Window.prototype.removeEventListener = removeEventListener;
-		}
-	}
-})();
-
-var Duration, reqSent;
+﻿var Duration, reqSent;
 var newhttp;
 var showAlerts, showCatchedErr, alertLevel, forEmulator, isSSL;
-var warnText='', errorText = '', emulatorExt = "";
+var warnText = '', errorText = '', emulatorExt = "";
 var tempXML = '', tempREQ = '', tempFileName = '', text2save = '', reqParams = '';
 var g_form_id = '';
 var eribLogedIn = false, permissionsChecked = false;
 var requestName = '';
 
 var eribAddress = {
-	get: function() {return "---";},
-	set: function() {return},
-	options: function() {return [];},
-	add: function() {return }
+	get : function () {
+		return "---";
+	},
+	set : function () {
+		return
+	},
+	options : function () {
+		return [];
+	},
+	add : function () {
+		return
+	}
 }
 
 var eribServerInfo = {
@@ -241,7 +72,7 @@ var eribEntity = {
 	checkAvailable : false,
 	templateAvailable : false,
 	autopayable : false,
-	showResult: true,
+	showResult : true,
 	show : function () {
 		return '';
 	},
@@ -250,17 +81,17 @@ var eribEntity = {
 	}
 };
 
-var permissionsL2 = ["needUDBO", "ATMStorage", "AccountAbstract", "AccountBankDetails", "AccountClosingPayment", "AccountInfo", "AccountOpeningClaim", 
-"AutoPaymentInfo", "AutoSubscriptionInfo", "BanksDictionary", "CardAbstract", "CardInfo", "CloseAutoSubscriptionPayment", 
-"CloseMoneyBoxPayment", "CloseP2PAutoTransferClaim", "CreateAutoPaymentPayment", "CreateAutoSubscriptionPayment", 
-"CreateLongOfferPayment", "CreateLongOfferPaymentForRur", "CreateMoneyBoxPayment", "CreateP2PAutoTransferClaim", "CreditCardOffice", 
-"DelayAutoSubscriptionPayment", "DelayP2PAutoTransferClaim", "EditAutoPaymentPayment", "EditAutoSubscriptionPayment", 
-"EditMoneyBoxClaim", "EditP2PAutoTransferClaim", "IMAccountAbstract", "InternalPayment", "JurPayment", "LoanAbstract", 
-"LoanCardOffer", "LoanCardProduct", "LoanInfo", "LoanOffer", "LoanProduct", "LongOfferInfo", "LoyaltyInternal", 
-"LoyaltyProgramRegistrationClaim", "MoneyBoxManagement", "Offers", "OperationCodesDictionary", "PFRClaimsList", "PFRStatement", 
-"PFRStatementClaim", "Payments", "Permissions", "Products", "Rates", "RecoverMoneyBoxPayment", "RecoveryAutoSubscriptionPayment", 
-"RecoveryP2PAutoTransferClaim", "RefuseAutoPaymentPayment", "RefuseLongOffer", "RefuseMoneyBoxPayment", "RegionsDictionary", 
-"Registration", "RegularPayments", "RemoveTemplate", "RurPayJurSB", "RurPayment", "Templates"];
+var permissionsL2 = ["needUDBO", "ATMStorage", "AccountAbstract", "AccountBankDetails", "AccountClosingPayment", "AccountInfo", "AccountOpeningClaim",
+	"AutoPaymentInfo", "AutoSubscriptionInfo", "BanksDictionary", "CardAbstract", "CardInfo", "CloseAutoSubscriptionPayment",
+	"CloseMoneyBoxPayment", "CloseP2PAutoTransferClaim", "CreateAutoPaymentPayment", "CreateAutoSubscriptionPayment",
+	"CreateLongOfferPayment", "CreateLongOfferPaymentForRur", "CreateMoneyBoxPayment", "CreateP2PAutoTransferClaim", "CreditCardOffice",
+	"DelayAutoSubscriptionPayment", "DelayP2PAutoTransferClaim", "EditAutoPaymentPayment", "EditAutoSubscriptionPayment",
+	"EditMoneyBoxClaim", "EditP2PAutoTransferClaim", "IMAccountAbstract", "InternalPayment", "JurPayment", "LoanAbstract",
+	"LoanCardOffer", "LoanCardProduct", "LoanInfo", "LoanOffer", "LoanProduct", "LongOfferInfo", "LoyaltyInternal",
+	"LoyaltyProgramRegistrationClaim", "MoneyBoxManagement", "Offers", "OperationCodesDictionary", "PFRClaimsList", "PFRStatement",
+	"PFRStatementClaim", "Payments", "Permissions", "Products", "Rates", "RecoverMoneyBoxPayment", "RecoveryAutoSubscriptionPayment",
+	"RecoveryP2PAutoTransferClaim", "RefuseAutoPaymentPayment", "RefuseLongOffer", "RefuseMoneyBoxPayment", "RegionsDictionary",
+	"Registration", "RegularPayments", "RemoveTemplate", "RurPayJurSB", "RurPayment", "Templates"];
 
 function clearEribSeverInfo() {
 	//console.log('clearEribSeverInfo()');
@@ -297,50 +128,52 @@ function Version(eribSpec) {
 	//console.log('Version('+eribSpec+')');
 	eribAddress = new eribAddressConf();
 	eribServerInfo.csaAddrr = eribAddress.get();
-	document.getElementById('currentServer').innerHTML = 'Default: [' + eribServerInfo.csaAddrr + ']';	
+	document.getElementById('currentServer').innerHTML = 'Default: [' + eribServerInfo.csaAddrr + ']';
 	try {
 		if (!eribSpec.isEmpty()) {
 			var htmlVersion = document.getElementById('version').title + eribSpec;
 			document.getElementById('version').innerHTML = 'jcode version:' + scriptVersion + '<br />' + htmlVersion;
 			//console.log('Version: jcode version:' + scriptVersion + ' :: ' + htmlVersion);
 		}
-	}
-	catch(e) {
+	} catch (e) {
 		//eribSpec is an object, not a string
 	}
 }
 
 var choiceAddr = [];
 function prepareChoiceAddr() {
-	choiceAddr = getElementsByClassName(document.getElementById('settings'),'option');
+	choiceAddr = getElementsByClassName(document.getElementById('settings'), 'option');
 }
 
 function eribAddressConf() {
 	try {
-		document.getElementById('settings').addEventListener('mouseleave',Version,true);
-	}
-	catch (e) {
-	}
+		document.getElementById('settings').addEventListener('mouseleave', Version, true);
+	} catch (e) {}
 	this.get = function () {
 		var eribAddress = '---';
-		for (var i=0;i<2;i++) if (choiceAddr[i].childNodes[0].checked) eribAddress = choiceAddr[i].childNodes[1].value;
+		for (var i = 0; i < 2; i++)
+			if (choiceAddr[i].childNodes[0].checked)
+				eribAddress = choiceAddr[i].childNodes[1].value;
 		//console.log('eribAddressConf.get(): eribAddress: ' + eribAddress );
 		return eribAddress;
 	};
 	this.set = function (eribAddress) {
 		//console.log('eribAddressConf.set(eribAddress: ' + eribAddress + ')');
-		if (choiceAddr[0].childNodes[0].checked) choiceAddr[0].childNodes[1].value = eribAddress;
+		if (choiceAddr[0].childNodes[0].checked)
+			choiceAddr[0].childNodes[1].value = eribAddress;
 	};
 	this.options = function () {
 		//console.log('eribAddressConf.options()');
-		if (choiceAddr[1].childNodes[0].checked) return choiceAddr[1].childNodes[1].options;
+		if (choiceAddr[1].childNodes[0].checked)
+			return choiceAddr[1].childNodes[1].options;
 		return [];
 	};
 	this.add = function (newoption) {
 		//console.log('eribAddressConf.add(newoption)');
-		if (choiceAddr[1].childNodes[0].checked) choiceAddr[1].childNodes[1].add(newoption);
+		if (choiceAddr[1].childNodes[0].checked)
+			choiceAddr[1].childNodes[1].add(newoption);
 	};
-	
+
 }
 
 function init_my_page(dontUpdate, isSave2File) {
@@ -509,7 +342,7 @@ function trySubmit(form_id, isIt4Save, currentAddr) {
 		updateStatus();
 		trySubmit("4.13.0", true);
 		g_form_id = temp_form_id;
-		permissionsChecked = true;		
+		permissionsChecked = true;
 		//console.log('eribClientInfo: clear \r\n' + 'eribLogedIn: ' + eribLogedIn + '\r\n' + 'permissionsChecked: '+ permissionsChecked);
 	}
 	tempFileName = form_id + ".xml";
@@ -553,35 +386,35 @@ function trySubmit_new(form_id, isIt4Save, currentAddr) {
 		};
 		//console.log('eribClientInfo: clear');
 		eribClientInfo = {
+			name : "",
+			surName : "",
+			patrName : "",
+			product : {
+				id : -1
+			},
+			clientType : "",
+			clientRegion : {
+				id : -1,
 				name : "",
-				surName : "",
-				patrName : "",
-				product : {
-					id : -1
-				},
-				clientType : "",
-				clientRegion : {
-					id : -1,
-					name : "",
-					guid : "",
-					children : new productListObj()
-				},
-				atmRegion : {
-					id : -1,
-					name : "",
-					guid : "",
-					children : []
-				},
-				checkedUDBO : false,
-				agreementList : new productListObj(),
-				productsList : new productListObj(),
-				regularPaymentsList : new productListObj(),
-				permissionList : new dictionary(),
-				templatesList : new productListObj(),
-				loanOffersList : new productListObj(),
-				toString : function () {
-					return '';
-				}
+				guid : "",
+				children : new productListObj()
+			},
+			atmRegion : {
+				id : -1,
+				name : "",
+				guid : "",
+				children : []
+			},
+			checkedUDBO : false,
+			agreementList : new productListObj(),
+			productsList : new productListObj(),
+			regularPaymentsList : new productListObj(),
+			permissionList : new dictionary(),
+			templatesList : new productListObj(),
+			loanOffersList : new productListObj(),
+			toString : function () {
+				return '';
+			}
 		};
 	}
 	if (operationName == 'multylogon.stage1') {
@@ -603,8 +436,9 @@ function trySubmit_new(form_id, isIt4Save, currentAddr) {
 
 	if (showAlerts && alertLevel >= 80)
 		alert('ERIB URL: ' + psiURL);
-	if (psiURL==='---') return;
-		
+	if (psiURL === '---')
+		return;
+
 	var formData = document.getElementById(form_id);
 	var formAction = formData.action.replace("psi-address", psiURL);
 	pathEmulator = formData.action.replace("http://psi-address", "");
@@ -653,9 +487,9 @@ function trySubmit_new(form_id, isIt4Save, currentAddr) {
 	};
 	var erib_fileds2send = resultFields.join("&");
 	reqParams = erib_fileds2send;
-	if (isIt4Save && operationName==='permissions') {
-		isIt4Save=false;
-		async=false;
+	if (isIt4Save && operationName === 'permissions') {
+		isIt4Save = false;
+		async = false;
 	}
 	HttpRequest(formAction, erib_fileds2send, "urlencoded", "POST", !isIt4Save, false, async);
 }
@@ -675,7 +509,7 @@ function HttpRequest(URL, FormData, typeData, requestType, isIt4Save, getJSON, a
 			if (XMLHttpRequest.prototype.addEventListener) {
 				newhttp.addEventListener("load", parseJSON, true);
 			} else {
-				if (newhttp.attachEvent !== undefined) {
+				if (newhttp.attachEvent) {
 					newhttp.attachEvent("onload", parseJSON);
 				} else {
 					//console.log('HttpRequest:: Не удалось выполнить addEventListener и attachEvent');
@@ -688,7 +522,7 @@ function HttpRequest(URL, FormData, typeData, requestType, isIt4Save, getJSON, a
 			if (XMLHttpRequest.prototype.addEventListener) {
 				newhttp.addEventListener("load", parseAnswer, true);
 			} else {
-				if (newhttp.attachEvent !== undefined) {
+				if (newhttp.attachEvent) {
 					newhttp.attachEvent("onload", parseAnswer);
 				} else {
 					//console.log('HttpRequest:: Не удалось выполнить addEventListener и attachEvent');
@@ -708,8 +542,10 @@ function HttpRequest(URL, FormData, typeData, requestType, isIt4Save, getJSON, a
 			clearInterval(updateInterval);
 			try {
 				var tmpStatus = newhttp.status;
-				if (getJSON) parseJSON(newhttp);
-				if (isIt4Save) parseAnswer(newhttp);
+				if (getJSON)
+					parseJSON(newhttp);
+				if (isIt4Save)
+					parseAnswer(newhttp);
 			} catch (err) {
 				strTimeout = " Не удалось получить ответ от удаленного сервера\r\n" + err.name + ":" + err.message;
 				//console.warn('HttpRequest: ' + strTimeout);
@@ -776,146 +612,6 @@ function HttpRequest(URL, FormData, typeData, requestType, isIt4Save, getJSON, a
 		//console.error('HttpRequest: ' + strTimeout);
 		showAlerts = false;
 	}
-}
-
-function Timer(ms) {
-	//console.log('Timer(ms:'+ms+')');
-	var tresult;
-	var d = new Date();
-	var milliseconds = d.getTime();
-	var time = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2) + ',' + ('00' + d.getMilliseconds()).slice(-3);
-	ms = !ms ? tresult = milliseconds : tresult = time;
-	//console.log('Timer: ' + tresult);
-	return tresult;
-}
-
-function LenB(str) {
-	//console.log('LenB(str:'+str+')');
-	var m = encodeURIComponent(str).match(/%[89ABab]/g);
-	return str.length + (m ? m.length : 0);
-}
-
-function setFormData(arrData, typeData) {
-	//console.log('setFormData(arrData:'+arrData+', typeData:'+typeData+')');
-	var body = [];
-	var isPush = false;
-	var nodeValue = "",
-	nodeName = "",
-	nodeTitle = "";
-	emulatorExt = "";
-	for (var i = 0; i < arrData.elements.length; i++) {
-		isPush = false;
-		nodeName = arrData.elements[i].name;
-		nodeTitle = arrData.elements[i].title;
-		var isVisible = (arrData.elements[i].parentNode.style.display !== 'none');
-		if (nodeName !== "" && isVisible) {
-			isPush = true;
-			nodeValue = arrData.elements[i].value;
-			if (nodeValue !== "") {
-				switch (arrData.elements[i].type) {
-				case "checkbox":
-					isPush = arrData.elements[i].checked;
-					if (document.getElementById(nodeValue))
-						nodeValue = document.getElementById(nodeValue).value;
-					break;
-				case "radio":
-					isPush = arrData.elements[i].checked;
-					if (nodeTitle !== '' && nodeTitle !== undefined)
-						nodeName = nodeTitle;
-					if (document.getElementById(nodeValue))
-						nodeValue = document.getElementById(nodeValue).value;
-					break;
-				}
-			}
-		}
-		if (isPush) {
-			switch (typeData) {
-			case "boundary":
-				body.push('Content-Disposition: form-data; name="' + nodeName + '"\r\nContent-Type: text/plain; charset=win1251\r\nContent-Transfer-Encoding: 8bit\r\n\r\n' + encodeURIComponent(nodeValue) + '\r\n');
-				break;
-			case "urlencoded":
-				body.push(nodeName + '=' + replaceHTML(convert2win1251(nodeValue)));
-				break;
-			}
-		}
-	}
-	if (forEmulator)
-		emulatorExt = checkEmulator(body);
-	switch (typeData) {
-	case "boundary":
-		boundary = 'asdfghj' + String(Math.random()).slice(2) + 'lkjhgfd';
-		var boundaryMiddle = '--' + boundary + '\r\n';
-		var boundaryLast = '--' + boundary + '--\r\n';
-		body = "\r\n" + body.join(boundaryMiddle) + boundaryLast;
-		break;
-	case "urlencoded":
-		break;
-	default:
-		body = false;
-	}
-	if (showAlerts && alertLevel >= 40)
-		alert(body.join('&'));
-	//console.log('setFormData: ' + body);
-	return body;
-}
-
-function trim(str, charlist) {
-	//console.log('trim(str:'+str+', charlist:'+charlist+')');
-	str = !str ? '' : str;
-	charlist = !charlist ? ' \xA0' : charlist.replace(/([\[\]\(\)\.\?\/\*\{\}\+\$\^\:])/g, '\$1');
-	var re = new RegExp('^[' + charlist + ']+|[' + charlist + ']+$', 'g');
-	return str.replace(re, '');
-}
-
-function convert2win1251(string) {
-	//console.log('convert2win1251(string:'+string+')');
-	var russian = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'З', 'И', 'Й', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ы', 'Ь', 'Э', 'Ю', 'Я', 'а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ы', 'ь', 'э', 'ю', 'я'];
-	var win1251 = ['%c0', '%c1', '%c2', '%c3', '%c4', '%c5', '%c6', '%c7', '%c8', '%c9', '%ca', '%cb', '%cc', '%cd', '%ce', '%cf', '%d0', '%d1', '%d2', '%d3', '%d4', '%d5', '%d6', '%d7', '%d8', '%d9', '%da', '%db', '%dc', '%dd', '%de', '%df', '%e0', '%e1', '%e2', '%e3', '%e4', '%e5', '%e6', '%e7', '%e8', '%e9', '%ea', '%eb', '%ec', '%ed', '%ee', '%ef', '%f0', '%f1', '%f2', '%f3', '%f4', '%f5', '%f6', '%f7', '%f8', '%f9', '%fa', '%fb', '%fc', '%fd', '%fe', '%ff'];
-	for (var i = 0; i < russian.length; i++) {
-		string = string.split(russian[i]).join(win1251[i]);
-	}
-	return string;
-}
-
-function replaceHTML(string2clear) {
-	//console.log('replaceHTML(string2clear:'+string2clear+')');
-	var nonxmlEntities = ['&', '<', '>', '"', "'"];
-	var xmlEntities = ['&amp;', '&lt;', '&gt;', '&quot;', "&apos;"];
-	for (var i = 0; i < nonxmlEntities.length; i++) {
-		string2clear = string2clear.split(nonxmlEntities[i]).join(xmlEntities[i]);
-	}
-	return string2clear;
-}
-
-function HTMLreplace(string2clear) {
-	//console.log('HTMLreplace(string2clear:'+string2clear+')');
-	var nonxmlEntities = ['&', '<', '>', '"', "'"];
-	var xmlEntities = ['&amp;', '&lt;', '&gt;', '&quot;', "&apos;"];
-	for (var i = 0; i < nonxmlEntities.length; i++) {
-		string2clear = string2clear.split(xmlEntities[i]).join(nonxmlEntities[i]);
-	}
-	return string2clear;
-}
-
-function getXmlValue(srcXML, tagName, isBoolean) {
-	//console.log('getXmlValue(srcXML, tagName:'+tagName+', isBoolean:'+isBoolean+')');
-	var result = '';
-	try {
-		var elementsList = srcXML.getElementsByTagName(tagName);
-		if (!isBoolean) {
-			if (elementsList[0].text)
-				result = elementsList[0].text;
-			if (elementsList[0].textContent)
-				result = elementsList[0].textContent;
-		} else {
-			result = (elementsList.length > 0);
-		}
-	} catch (e) {
-		//console.warn('getXmlValue(): ' + e.description);
-		//do nothing
-	}
-	//console.log('getXmlValue: ' + result);
-	return result;
 }
 
 function textFromStatus(code) {
@@ -992,21 +688,21 @@ function erib_structure(xmlObject) {
 	autopayable = false,
 	isInitialData = false,
 	isConfirm = false,
-	isPermissions=false,
-	showResult=true;
+	isPermissions = false,
+	showResult = true;
 	var documentId,
 	receiptTitle = '',
 	formId = '',
 	host = '';
 	this.host = host;
 	this.person = new eribPerson(xmlObject);
-	
+
 	var transactionToken = getXmlValue(xmlObject, "transactionToken");
 	var operationUID = getXmlValue(xmlObject, "operationUID");
 	var form = getXmlValue(xmlObject, "form");
 	var localStatus = new responseStatus(statusObj);
 	var isLogin = getXmlValue(xmlObject, "loginCompleted", true);
-	
+
 	if (isLogin) {
 		eribLogedIn = (getXmlValue(xmlObject, "loginCompleted") === 'true');
 		var isChooseAgreement = getXmlValue(xmlObject, "chooseAgreementStage", true);
@@ -1043,10 +739,11 @@ function erib_structure(xmlObject) {
 	isReceiptDocument = getXmlValue(xmlObject, "DocumentCheck", true);
 	isConfirm = getXmlValue(xmlObject, "confirmStage", true);
 	isPermissions = getXmlValue(xmlObject, "permissions", true);
-	if (isPermissions) eribClientInfo.checkedUDBO = (getXmlValue(xmlObject, "checkedUDBO") === 'true');	
-	this.isPermissions=isPermissions;
+	if (isPermissions)
+		eribClientInfo.checkedUDBO = (getXmlValue(xmlObject, "checkedUDBO") === 'true');
+	this.isPermissions = isPermissions;
 	this.isDocument = (isDocument || isInitialData || isReceiptDocument);
-	
+
 	if (isDocument) {
 		documentId = getXmlValue(xmlObject, "id");
 		this.documentId = documentId;
@@ -1072,7 +769,8 @@ function erib_structure(xmlObject) {
 		//Not a document means it might be a list
 		if (eribLogedIn) {
 			//if(!this.person) this.person = new eribPerson(xmlObject);
-			if (isPermissions) showResult = (eribClientInfo.permissionList.key.length>1);
+			if (isPermissions)
+				showResult = (eribClientInfo.permissionList.key.length > 1);
 			this.list = new list();
 		}
 	}
@@ -1082,8 +780,8 @@ function erib_structure(xmlObject) {
 	this.checkAvailable = checkAvailable;
 	this.templateAvailable = templateAvailable;
 	this.autopayable = autopayable;
-	this.showResult=showResult;
-	
+	this.showResult = showResult;
+
 	//Structures
 	function responseStatus(statusObj) {
 		//console.log('erib_structure: responseStatus(statusObj)');
@@ -1558,10 +1256,10 @@ function erib_structure(xmlObject) {
 						}
 						if (isPermissions) {
 							var permList = new eribPermissions(currentNode);
-							if (eribClientInfo.permissionList.item(permList.name)!==permList.isAllowed) {
+							if (eribClientInfo.permissionList.item(permList.name) !== permList.isAllowed) {
 								eribClientInfo.permissionList.deleteitem(permList.name);
 							}
-							eribClientInfo.permissionList.add(permList.name,permList.isAllowed);
+							eribClientInfo.permissionList.add(permList.name, permList.isAllowed);
 							notListed = false;
 						}
 						if (StandartList.indexOf(listEntry.tagType) !== -1) {
@@ -1820,14 +1518,6 @@ function erib_structure(xmlObject) {
 			save2file += "<input class='save2File' type='button' value='Сохранить' onclick='saveToFile(\"" + tempFileName + "\")'' />\r\n";
 			return save2file;
 		}
-		/* Старт отладки структуры LIST
-		if (this.list) {
-		if (this.list.length > 0) {
-		text2save = this.formLists(this.list);
-		result += "<input class='list2File' type='button' value='List2File' onclick='saveListToFile(\"" + tempFileName + "\")'' />\r\n";
-		}
-		}
-		Конец отладки структуры LIST */
 		return result;
 	};
 
@@ -2116,68 +1806,6 @@ function checkExactAmount(strTypeOfCharge) {
 	}
 }
 
-function xmlFormatter(xml) {
-	//console.log('xmlFormatter(xml:'+xml+')');
-	xml = xml.toString(); // привести к строке на случай, если xml - это объект
-	xml = xml.replace(/(>)\s*(<)(\/*)/g, '$1\n$2$3'); // удалить пробелы между тэгами (<tag>      </tag>), заменив их на символ \n, итоговый результат: >\n</
-	xml = xml.replace(/ *(.*) +\n/g, '$1\n'); // вставить символ \n после последовательности |      some text    \n|, итоговый результат: |      some text    \n\n|
-	xml = xml.replace(/(<.+>)(.+\n)/g, '$1\n$2'); // вставить символ \n между тэгом и текстом, итоговый результат: <tag>\nsome text\n
-	var formattedXML = '',
-	transitions = { // 4 типа тэгов: single, closing, opening, other (text, doctype, comment) -  всего 4*4 = 16 вариантов transitions
-		'single->single' : 0,
-		'single->closing' : -1,
-		'single->opening' : 0,
-		'single->other' : 0,
-		'closing->single' : 0,
-		'closing->closing' : -1,
-		'closing->opening' : 0,
-		'closing->other' : 0,
-		'opening->single' : 1,
-		'opening->closing' : 0,
-		'opening->opening' : 1,
-		'opening->other' : 1,
-		'other->single' : 0,
-		'other->closing' : -1,
-		'other->opening' : 0,
-		'other->other' : 0
-	},
-	i,
-	j,
-	lines = xml.split('\n'),
-	linesLength = lines.length,
-	ln,
-	type,
-	fromTo,
-	lastType = 'other',
-	indent = 0,
-	padding;
-	for (i = 0; i < linesLength; i++) {
-		ln = lines[i];
-		if (/<.+\/>/.test(ln)) { // эта линия содержит одиночный (single) тэг, например: <br />
-			type = 'single';
-		} else if (/<\/.+>/.test(ln)) { // эта линия содержит закрывающий (closing) тэг, например: </a>
-			type = 'closing';
-		} else if (/<[^!].*>/.test(ln)) { // эта линия содержит открывающий (opening) тэг, но это не что-то вроде <!something>, например: <a>
-			type = 'opening';
-		} else {
-			type = 'other';
-		}
-		fromTo = lastType + '->' + type;
-		lastType = type;
-		indent += transitions[fromTo];
-		padding = '';
-		for (j = 0; j < indent; j++) {
-			padding += '  '; // 2 пробела можно заменить на Tab: padding += '\t';
-		}
-		if (fromTo === 'opening->closing') {
-			formattedXML = formattedXML.substr(0, formattedXML.length - 1) + ln + '\n'; // substr() удаляет разрыв строки (\n) оставшийся от предыдущего цикла
-		} else {
-			formattedXML += padding + ln + '\n';
-		}
-	}
-	return formattedXML;
-};
-
 function saveToFile(fileName) {
 	//console.log('saveToFile(fileName:'+fileName+')');
 	init_my_page(true, true);
@@ -2205,41 +1833,6 @@ function saveListToFile(fileName) {
 		fileName = 'eribTesterList';
 	}
 	saveTextAs(text2save, fileName + ".txt");
-}
-
-function isNumeric(sValue) {
-	//console.log('isNumeric(sValue:'+sValue+')');
-	var result = false;
-	try {
-		var z = parseFloat(sValue);
-		result = (z * 0 === 0);
-	} catch (e) {
-		//console.error ('isNumeric(): ' + e.description);
-	}
-	//console.log('isNumeric('+sValue+'): '+ result);
-	return result;
-}
-
-function getParam(paramMap, paramName, isMulty) {
-	//console.log('getParam(paramMap:'+paramMap+', paramName:'+paramName+', isMulty:'+isMulty+')');
-	var result = '';
-	var append = false;
-	try {
-		for (var i = 0; i < paramMap.length; i++) {
-			name = paramMap[i].split('=')[0]
-				value = paramMap[i].split('=')[1]
-				if (name === paramName) {
-					append ? result += "." + value : result += value;
-					append = true;
-				}
-		}
-	}
-	finally {
-		if (!result)
-			result = '';
-		//console.log('getParam(paramMap,'+paramName+', isMulty: '+ isMulty + '): '+ result);
-		return result;
-	}
 }
 
 function checkEmulator(parametersArray) {
@@ -2341,32 +1934,6 @@ function checkEmulator(parametersArray) {
 	return result;
 }
 
-function isCheckedBox(checkBoxId) {
-	//console.log('isCheckedBox(checkBoxId:'+checkBoxId+')');
-	var result = false;
-	try {
-		result = document.getElementById(checkBoxId).checked;
-	} catch (e) {
-		//console.error ('isCheckedBox(): ' + e.description);
-		//Ой, что-то не получилось
-	}
-	//console.log('isCheckedBox('+checkBoxId+'): '+ result);
-	return result;
-}
-
-function getAllSiblings(nodeThatFired) {
-	//console.log('getAllSiblings(nodeThatFired:'+nodeThatFired+')');
-	var result = [];
-	var node = nodeThatFired.parentNode.childNodes[0];
-	while (node) {
-		if (node.nodeType === 1 && node !== nodeThatFired) {
-			result.push(node);
-		}
-		node = node.nextElementSibling || node.nextSibling;
-	}
-	return result;
-}
-
 function checkpostData(allDocumentFields) {
 	//console.log('checkpostData(allDocumentFields:'+allDocumentFields+')');
 	var result = [];
@@ -2411,7 +1978,7 @@ function fillTheList(tagId, optionList, namedItem) {
 				optionList.outerHTML = "<input name='id' value='' type='text'/>";
 		} catch (err2) {
 			//console.error('fillTheList('+tagId+', optionList, ' + namedItem + '): ' + err2.description);
-			
+
 			var newElement = document.createElement('input');
 			newElement.name = 'id'
 				newElement.value = ''
@@ -2458,8 +2025,9 @@ function parseAnswer(result) {
 	//console.log('parseAnswer(result)');
 	clearInterval(updateInterval);
 	Duration = Timer() - timeStarted;
-	if (!result) result = this;
-	try{
+	if (!result)
+		result = this;
+	try {
 		if (XMLHttpRequest.prototype.removeEventListener) {
 			result.removeEventListener("load", parseAnswer, true);
 		} else {
@@ -2469,8 +2037,7 @@ function parseAnswer(result) {
 				result.onload = '';
 			}
 		}
-	}
-	catch(e){
+	} catch (e) {
 		//console.error('parseAnswer: ' + e.description);
 	}
 	if (showAlerts && alertLevel >= 50)
@@ -2822,14 +2389,16 @@ function parseAnswer(result) {
 			}
 		}
 	}
-	
+
 	var showResult = eribEntity.showResult;
-	if (showResult === undefined) showResult=true;
-	if (!showResult && requestName==='permissions') showResult=true;
+	if (showResult === undefined)
+		showResult = true;
+	if (!showResult && requestName === 'permissions')
+		showResult = true;
 	updateStatus();
 	var erib_status = document.getElementById("erib_status");
 	//console.warn('showResult: ' + showResult + '\r\n' + tempXML);
-	if (showResult){
+	if (showResult) {
 		tempXML = (xmlFormatter(result.responseText));
 		document.getElementById("resultTab").innerHTML = "<div><pre class='brush: xml;'>\n" + replaceHTML(tempXML) + "</pre></div>";
 		var style = 'border';
@@ -2914,7 +2483,7 @@ function parseAnswer(result) {
 		eribshowerror = true;
 	} else {
 		if (errorText !== '') {
-			errorText+='\r\n' + warnText;
+			errorText += '\r\n' + warnText;
 			erib_debug.innerHTML = "<span id='closedebug' class='closeit'>&#10006;</span><div class='debug-content'>debug info<pre>" + errorText + "</pre></div>";
 			eribshowerror = true;
 		}
@@ -2981,7 +2550,7 @@ function parseAnswer(result) {
 			if (serverList)
 				optionsLength = serverList.length;
 			var addOption = true;
-			
+
 			for (var i = 0; i < optionsLength; i++) {
 				var currentOption = serverList[i];
 				if (currentOption.value.contains(newoption.value)) {
@@ -3013,8 +2582,9 @@ function parseAnswer(result) {
 
 function parseJSON(result) {
 	//console.log('parseJSON(result)');
-	if (!result) result = this;
-	try{
+	if (!result)
+		result = this;
+	try {
 		if (XMLHttpRequest.prototype.removeEventListener) {
 			result.removeEventListener("load", parseJSON, true);
 		} else {
@@ -3024,8 +2594,7 @@ function parseJSON(result) {
 				result.onload = '';
 			}
 		}
-	}
-	catch(e){
+	} catch (e) {
 		//console.error('parseJSON: ' + e.description);
 	}
 
@@ -3153,22 +2722,22 @@ var disabledReqs = new dictionary();
 function preparePermission() {
 	var arrLength = permissionsL2.length;
 	for (var i = 0; i < arrLength; i++) {
-		disabledReqs.add(permissionsL2[i],getElementsByClassName(document, permissionsL2[i]));
+		disabledReqs.add(permissionsL2[i], getElementsByClassName(document, permissionsL2[i]));
 	}
 }
 
-function updatePermissions(){
+function updatePermissions() {
 	//console.log('updatePermissions()');
 	var arrLength = permissionsL2.length;
 	permList = {
-		name:'needUDBO',
-		isAllowed: eribClientInfo.checkedUDBO
+		name : 'needUDBO',
+		isAllowed : eribClientInfo.checkedUDBO
 	}
-	if (eribClientInfo.permissionList.item(permList.name)!==permList.isAllowed) {
+	if (eribClientInfo.permissionList.item(permList.name) !== permList.isAllowed) {
 		eribClientInfo.permissionList.deleteitem(permList.name);
 	}
-	eribClientInfo.permissionList.add(permList.name,permList.isAllowed);
-	
+	eribClientInfo.permissionList.add(permList.name, permList.isAllowed);
+
 	for (var i = 0; i < arrLength; i++) {
 		var isAllowed = eribClientInfo.permissionList.item(permissionsL2[i]);
 		var currentClass = disabledReqs.item(permissionsL2[i]);

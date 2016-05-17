@@ -1,357 +1,7 @@
-(function () {
-	try {
-		if (!XMLDocument.prototype.loadXML) {
-			XMLDocument.prototype.loadXML = function (xmlString) {
-				if (this === undefined || this === null)
-					throw new TypeError('"XMLDocument.prototype.loadXML" is NULL or not defined');
-				var childNodes = this.childNodes;
-				for (var i = childNodes.length - 1; i >= 0; i--)
-					this.removeChild(childNodes[i]);
-				 
-				var dp = new DOMParser();
-				var newDOM = dp.parseFromString(xmlString, "text/xml");
-				var newElt = this.importNode(newDOM.documentElement, true);
-				this.appendChild(newElt);
-			};
-		}
-
-		/*
-		if (!XMLDocument.prototype.children) {
-		XMLDocument.prototype.children = this.childNodes;
-		}
-
-		if (!Element.prototype.children) {
-		Element.prototype.children = this.childNodes;
-		}
-		 */
-	} catch (e) {}
-	// check for XPath implementation
-	if (document.implementation.hasFeature("XPath", "3.0")) {
-		// prototying the XMLDocument selectNodes
-		XMLDocument.prototype.selectNodes = function (cXPathString, xNode) {
-			if (!xNode) {
-				xNode = this;
-			}
-			var oNSResolver = this.createNSResolver(this.documentElement)
-				var aItems = this.evaluate(cXPathString, xNode, oNSResolver,
-					XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)
-				var aResult = [];
-			for (var i = 0; i < aItems.snapshotLength; i++) {
-				aResult[i] = aItems.snapshotItem(i);
-			}
-			return aResult;
-		}
-
-		// prototying the Element selectNodes
-		Element.prototype.selectNodes = function (cXPathString) {
-			if (this.ownerDocument.selectNodes) {
-				return this.ownerDocument.selectNodes(cXPathString, this);
-			} else {
-				throw "For XML Elements Only";
-			}
-		}
-
-		// prototying the XMLDocument selectSingleNode
-		XMLDocument.prototype.selectSingleNode = function (cXPathString, xNode) {
-			if (!xNode) {
-				xNode = this;
-			}
-			var xItems = this.selectNodes(cXPathString, xNode);
-			if (xItems.length > 0) {
-				return xItems[0];
-			} else {
-				return null;
-			}
-		}
-
-		// prototying the Element selectSingleNode
-		Element.prototype.selectSingleNode = function (cXPathString) {
-			if (this.ownerDocument.selectSingleNode) {
-				return this.ownerDocument.selectSingleNode(cXPathString, this);
-			} else {
-				throw "For XML Elements Only";
-			}
-		}
-	}
-
-	/*
-	if (!Element.prototype.selectNodes) {
-	Element.prototype.selectNodes = function (path) {
-	if (this === undefined || this === null)
-	throw new TypeError('"Element.prototype.selectNodes" is NULL or not defined');
-	var pathToTags = path.split('/');
-	var tagsCount = pathToTags.length;
-	var result=[];
-	result.push(this);
-	switch (pathToTags[0]) {
-	case '.':
-	for (var currentTag=1;currentTag<tagsCount;currentTag++) {
-	var tempRes=[];
-	for (var currentRes=0;currentRes<result.length;currentRes++)
-	tempRes = tempRes.concat(result[currentRes].getElementsByTagName(pathToTags[currentTag]));
-	var tempElements=[];
-	for (var tempT=0;tempT<tempRes.length;tempT++)
-	tempElements.push(tempRes[tempT].children);
-	result = tempElements;
-	}
-	break;
-	case '..':
-	for (var currentTag=1;currentTag<tagsCount;currentTag++) {
-	for (var currentRes=0;currentRes<result.length;currentRes++)
-	tempRes = tempRes.concat(result[currentRes].getElementsByTagName(pathToTags[currentTag]));
-	var tempElements=[];
-	for (var tempT=0;tempT<tempRes.length;tempT++)
-	tempElements.push(tempRes[tempT]);
-	result = tempElements;
-	}
-	break;
-	default:
-	for (var currentTag=1;currentTag<tagsCount;currentTag++) {
-	result = result[0].getElementsByTagName(pathToTags[currentTag]);
-	}
-	}
-	return result;
-	};
-	}
-	 */
-	if (!Element.prototype.getAttribute) {
-		Element.prototype.getAttribute = function (attrName) {
-			if (this === undefined || this === null)
-				throw new TypeError('"Element.prototype.getAttribute" is NULL or not defined');
-			var attributes = this.attributes;
-			var attributesCount = attributes.length;
-			var result = attributes.getNamedItem(attrName);
-			return result;
-		};
-	}
-
-	if (!Array.prototype.indexOf) {
-		Array.prototype.indexOf = function (searchElement, fromIndex) {
-			if (this === undefined || this === null)
-				throw new TypeError('"Array.prototype.indexOf" is NULL or not defined');
-			var length = this.length >>> 0; //Convert object.length to UInt32
-			//alert(searchElement.constructor.toString());
-			fromIndex = +fromIndex || 0;
-			if (Math.abs(fromIndex) === Infinity)
-				fromIndex = 0;
-			if (fromIndex < 0) {
-				fromIndex += length;
-				if (fromIndex < 0) {
-					fromIndex = 0;
-				}
-			}
-			for (; fromIndex < length; fromIndex++) {
-				if (this[fromIndex] === searchElement)
-					return fromIndex;
-			}
-			return -1;
-		};
-	};
-	if (!Array.prototype.isEmpty) {
-		Array.prototype.isEmpty = function () {
-			if (this === undefined || this === null)
-				throw new TypeError('"Array.prototype.isEmpty" is NULL or not defined');
-			if (this.length < 1)
-				return true;
-			return false;
-		};
-	}
-	if (!String.prototype.contains) {
-		String.prototype.contains = function (searchString) {
-			if (this === undefined || this === null)
-				throw new TypeError('"String.prototype.contains" is NULL or not defined');
-			if (this.indexOf(searchString) !== -1)
-				return true;
-			return false;
-		};
-	}
-	if (!String.prototype.isEmpty) {
-		String.prototype.isEmpty = function () {
-			if (this === undefined || this === null)
-				throw new TypeError('"String.prototype.isEmpty" is NULL or not defined');
-			if (this.length < 1)
-				return true;
-			return false;
-		};
-	}
-	if (!String.prototype.repeat) {
-		String.prototype.repeat = function (count) {
-			'use strict';
-			if (this == null) {
-				throw new TypeError('can\'t convert ' + this + ' to object');
-			}
-			var str = '' + this;
-			count = +count;
-			if (count != count) {
-				count = 0;
-			}
-			if (count < 0) {
-				throw new RangeError('repeat count must be non-negative');
-			}
-			if (count == Infinity) {
-				throw new RangeError('repeat count must be less than infinity');
-			}
-			count = Math.floor(count);
-			if (str.length == 0 || count == 0) {
-				return '';
-			}
-			// Ensuring count is a 31-bit integer allows us to heavily optimize the
-			// main part. But anyway, most current (August 2014) browsers can't handle
-			// strings 1 << 28 chars or longer, so:
-			if (str.length * count >= 1 << 28) {
-				throw new RangeError('repeat count must not overflow maximum string size');
-			}
-			var rpt = '';
-			for (; ; ) {
-				if ((count & 1) == 1) {
-					rpt += str;
-				}
-				count >>>= 1;
-				if (count == 0) {
-					break;
-				}
-				str += str;
-			}
-			// Could we try:
-			// return Array(count + 1).join(this);
-			return rpt;
-		}
-	}
-	if (!Event.prototype.preventDefault) {
-		Event.prototype.preventDefault = function () {
-			this.returnValue = false;
-		};
-	}
-	if (!Event.prototype.stopPropagation) {
-		Event.prototype.stopPropagation = function () {
-			this.cancelBubble = true;
-		};
-	}
-	if (!Element.prototype.addEventListener) {
-		var eventListeners = [];
-
-		var addEventListener = function (type, listener /*, useCapture (will be ignored) */
-		) {
-			var self = this;
-			var wrapper = function (e) {
-				e.target = e.srcElement;
-				e.currentTarget = self;
-				if (typeof listener.handleEvent != 'undefined') {
-					listener.handleEvent(e);
-				} else {
-					listener.call(self, e);
-				}
-			};
-			if (type == "DOMContentLoaded") {
-				var wrapper2 = function (e) {
-					if (document.readyState == "complete") {
-						wrapper(e);
-					}
-				};
-				document.attachEvent("onreadystatechange", wrapper2);
-				eventListeners.push({
-					object : this,
-					type : type,
-					listener : listener,
-					wrapper : wrapper2
-				});
-
-				if (document.readyState == "complete") {
-					var e = new Event();
-					e.srcElement = window;
-					wrapper2(e);
-				}
-			} else {
-				this.attachEvent("on" + type, wrapper);
-				eventListeners.push({
-					object : this,
-					type : type,
-					listener : listener,
-					wrapper : wrapper
-				});
-			}
-		};
-		var removeEventListener = function (type, listener /*, useCapture (will be ignored) */
-		) {
-			var counter = 0;
-			while (counter < eventListeners.length) {
-				var eventListener = eventListeners[counter];
-				if (eventListener.object == this && eventListener.type == type && eventListener.listener == listener) {
-					if (type == "DOMContentLoaded") {
-						this.detachEvent("onreadystatechange", eventListener.wrapper);
-					} else {
-						this.detachEvent("on" + type, eventListener.wrapper);
-					}
-					eventListeners.splice(counter, 1);
-					break;
-				}
-				++counter;
-			}
-		};
-		Element.prototype.addEventListener = addEventListener;
-		Element.prototype.removeEventListener = removeEventListener;
-		if (HTMLDocument) {
-			HTMLDocument.prototype.addEventListener = addEventListener;
-			HTMLDocument.prototype.removeEventListener = removeEventListener;
-		}
-		if (Window) {
-			Window.prototype.addEventListener = addEventListener;
-			Window.prototype.removeEventListener = removeEventListener;
-		}
-	}
-})();
-
-var scriptVersion = "2.1.00";
-
-function getXMLObject(probablyXML, isText) {
-	//console.log('getXMLObject(probablyXML:' + probablyXML + ', isText: ' + isText + ')');
-	try {
-		if (isText) {
-			result = new XMLDocument();
-			result.load(probablyXML);
-			return result;
-		} else {
-			try {
-				var result;
-				var tryAgain = true;
-
-				if (probablyXML.responseXML && probablyXML.responseXML.documentElement) {
-					var children = (probablyXML.responseXML.children || probablyXML.responseXML.childNodes);
-					if (children.length > 0) {
-						if (probablyXML.responseXML.documentElement.nodeName === "parsererror") {
-							result = {
-								parseError : {
-									errorCode : 1,
-									reason : probablyXML.responseXML.documentElement.childNodes[0].nodeValue
-								}
-							};
-						} else {
-							result = probablyXML.responseXML;
-						}
-						tryAgain = false;
-					}
-				}
-
-				if (tryAgain) {
-					result = getXMLObject(probablyXML.responseText, true);
-				}
-			} catch (err) {
-				//console.warn('getXMLObject: ' + err.description);
-				result = {
-					parseError : {
-						errorCode : 1,
-						reason : err.description
-					}
-				};
-			}
-			finally {
-				return result;
-			}
-		}
-	} catch (e) {
-		//console.warn('getXMLObject: ' + e.description);
-	}
-}
+var scriptVersion = "2.1.01";
+var eribOperations = new dictionary();
+var alter2spec = new dictionary();
+var arrayOfrequests = [];
 
 function loadXML() {
 	//console.log('loadXML()');
@@ -376,7 +26,7 @@ function loadXML() {
 		}
 	}
 	if (errorXMLParser.isEmpty()) {
-		/* */
+		//
 		var newSettings = '';
 		var settings = docXML.documentElement.selectNodes('./settings');
 		var settingsLength = settings.length;
@@ -387,16 +37,16 @@ function loadXML() {
 		}
 		var globalSettings = document.getElementById('settings');
 		globalSettings.innerHTML = newSettings;
-		/* */
+		//
 		var operations = docXML.documentElement.selectNodes('./operation');
 		var operationsLength = operations.length;
-		var newMenu = ''
-			for (var currentOp = 0; currentOp < operationsLength; currentOp++) {
-				var currentOperation = operations[currentOp];
-				var divMenu = buildMenu(currentOperation);
-				newMenu += divMenu.outerHTML;
-			}
-			var globalDiv = document.getElementById('operations');
+		var newMenu = '';
+		for (var currentOp = 0; currentOp < operationsLength; currentOp++) {
+			var currentOperation = operations[currentOp];
+			var divMenu = buildMenu(currentOperation);
+			newMenu += divMenu.outerHTML;
+		}
+		var globalDiv = document.getElementById('operations');
 		globalDiv.innerHTML = newMenu;
 		if (document.getElementById("useStatus").checked) {
 			getCards();
@@ -408,6 +58,8 @@ function loadXML() {
 		divChoice();
 		preparePermission();
 		Version(eribSpec);
+		console.log('eribOperations:' + eribOperations.toString());
+		console.log('alter2spec:' + alter2spec.toString());
 	}
 }
 
@@ -435,7 +87,7 @@ function buildMenu(operation) {
 	input.type = 'checkbox';
 	input.setAttributeNode(inpName);
 	input.setAttributeNode(inpClass);
-	if (window.addEventListener) {
+	if (input.addEventListener) {
 		input.addEventListener("click", toggleChildren, false);
 	} else {
 		input.attachEvent("onclick", toggleChildren);
@@ -471,6 +123,7 @@ function buildMenu(operation) {
 }
 
 function buildRequest(request) {
+	arrayOfrequests = [];
 	var formDiv = document.createElement('div');
 	var req_name = request.getAttribute('name');
 	var req_id = request.getAttribute('id');
@@ -505,7 +158,6 @@ function buildRequest(request) {
 	attName.value = req_name;
 	attId.value = req_id;
 	attAction.value = action.getAttribute('url');
-
 	var paramsLength = params.length;
 	for (var par = 0; par < paramsLength; par++) {
 		var br = document.createElement('br');
@@ -557,7 +209,8 @@ function buildRequest(request) {
 	var inpClick = document.createAttribute('onclick');
 	inpClick.value = 'toggleChildren("' + req_id + '", true);';
 	formDiv.setAttributeNode(inpClick);
-
+	eribOperations.add(req_id, action.getAttribute('name'));
+	alter2spec.add(req_id, arrayOfrequests);
 	return formDiv;
 }
 
@@ -567,11 +220,13 @@ function createShow(param) {
 	var id = '',
 	name = [];
 	for (var opt = 0; opt < optionsLength; opt++) {
-		var value = options[opt].getAttribute('value') + '.next';
+		var value = options[opt].getAttribute('value');
 		var fill = (options[opt].getAttribute('fill') === 'true');
-		if (fill)
-			id = value;
-		name.push(value);
+		if (fill) {
+			id = value + '.next';
+			arrayOfrequests.push(value);
+		}
+		name.push(value + '.next');
 	}
 	var showDiv = document.createElement('div');
 	var classshow = document.createAttribute('class');
@@ -610,8 +265,8 @@ function createInput(param, type, req_id) {
 		var inpName = document.createAttribute('id');
 		var txtClass = document.createAttribute('class');
 		txtClass.value = 'settingsElement';
-		classValue = 'settingsElement'
-			inpClass.value = classValue;
+		classValue = 'settingsElement';
+		inpClass.value = classValue;
 		spanTxt.setAttributeNode(txtClass);
 	}
 
@@ -761,18 +416,6 @@ function fillDiv(curParam, req_id) {
 		pushInput[0].setAttribute('class', optionalclass);
 		pushInput[0].removeAttribute('name');
 		pushInput.unshift(optionalCheck);
-
-		/*
-		var divOptional = document.createElement('span');
-		var divClass = document.createAttribute('class');
-		divClass.value = 'optionaldiv';
-		divOptional.setAttributeNode(divClass);
-		for (var element=0;element<pushInput.length;element++) {
-		divOptional.appendChild(pushInput[element]);
-		}
-		pushInput=[];
-		pushInput.push(divOptional);
-		 */
 	} else {
 		//console.log('fillDiv(curParam [' + curParam.getAttribute('text') + ', req_id [' + req_id + '])');
 	}
@@ -805,37 +448,6 @@ function toggleChildren(divId, isForm) {
 			divChildren[child].style.display = showIt;
 	}
 	//console.log('toggleChildren(' + divId + ' ' + input.checked + ')');
-
-}
-
-function getXMLHttp(existingConn) {
-	//console.log('getXMLHttp(existingConn:' + existingConn + ')');
-	var xmlHttp = existingConn;
-	//For Mozila, Opera and WebKit Browsers
-	if (!xmlHttp && typeof(XMLHttpRequest) !== 'undefined') {
-		xmlHttp = new XMLHttpRequest();
-	} else {
-		try {
-			xmlHttp = new ActiveXObject("MSXML2.ServerXMLHTTP.3.0");
-		} catch (e) {
-			//console.error('getXMLHttp: ' + e.description);
-			try {
-				xmlHttp = new ActiveXObject("Microsoft.XMLHTTP");
-			} catch (E) {
-				//console.error('getXMLHttp: ' + E.description);
-				xmlHttp = null;
-			}
-		}
-	}
-	try {
-		//А вдруг получится.
-		xmlHttp.setOption(2, 13056);
-	} catch (e) {
-		//console.warn('getXMLHttp: ' + e.description);
-		//Ну, значит не получилось.
-	}
-	//console.log('getXMLHttp: xmlHttp');
-	return xmlHttp;
 }
 
 function buildSettings(setting) {
@@ -944,41 +556,4 @@ function divChoice() {
 			}
 		}
 	}
-}
-
-function addClass(element, class2Add) {
-	//console.log('addClass(element:' + element + ', class2Add:' + class2Add + ')');
-	var currentClassName = element.className;
-	if ((currentClassName !== null) && currentClassName.indexOf(class2Add) === -1) {
-		if ((currentClassName === "")) {
-			element.className = class2Add;
-		} else {
-			element.className += " " + class2Add;
-		}
-	}
-}
-
-function delClass(element, class2Del) {
-	//console.log('delClass(element:' + element + ', class2Del:' + class2Del + ')');
-	var classValues = element.className.split(" ");
-	var indexOfClass = classValues.indexOf(trim(class2Del));
-	if (indexOfClass !== -1) {
-		classValues.splice(indexOfClass, 1);
-	}
-	element.className = trim(classValues.join(" "));
-}
-
-function getElementsByClassName(htmlDocument, className) {
-	//console.log('getElementsByClassName(htmlDocument:' + htmlDocument + ', className:' + className + ')');
-	var result = [];
-	if (htmlDocument.getElementsByClassName)
-		return htmlDocument.getElementsByClassName(className);
-
-	var tables = htmlDocument.getElementsByTagName("*");
-	for (var i = 0; i < tables.length; i++) {
-		var classArr = tables[i].className.split(' ');
-		if (classArr.indexOf(className) !== -1)
-			result.push(tables[i]);
-	}
-	return result;
 }
