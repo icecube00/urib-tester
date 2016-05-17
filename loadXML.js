@@ -58,8 +58,8 @@ function loadXML() {
 		divChoice();
 		preparePermission();
 		Version(eribSpec);
-		console.log('eribOperations:' + eribOperations.toString());
-		console.log('alter2spec:' + alter2spec.toString());
+		//console.log('eribOperations:' + eribOperations.toString());
+		//console.log('alter2spec:' + alter2spec.toString());
 	}
 }
 
