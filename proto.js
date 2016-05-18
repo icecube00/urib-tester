@@ -1,274 +1,363 @@
 // ------------------------------     Prototypes     ------------------------------
-// check for XMLDocument implementation
-if (XMLDocument) {
-	if (!XMLDocument.prototype.loadXML) {
-		XMLDocument.prototype.loadXML = function (xmlString) {
-			if (this === undefined || this === null)
-				throw new TypeError('"XMLDocument.prototype.loadXML" is NULL or not defined');
-			var childNodes = this.childNodes;
-			for (var i = childNodes.length - 1; i >= 0; i--)
-				this.removeChild(childNodes[i]);
-			var dp = new DOMParser();
-			var newDOM = dp.parseFromString(xmlString, "text/xml");
-			var newElt = this.importNode(newDOM.documentElement, true);
-			this.appendChild(newElt);
-		};
-	}
-}
 
-// check for XPath implementation
-if (document.implementation.hasFeature("XPath", "3.0")) {
-	// prototying the XMLDocument selectNodes
-	XMLDocument.prototype.selectNodes = function (cXPathString, xNode) {
-		if (!xNode) {
-			xNode = this;
-		}
-		var oNSResolver = this.createNSResolver(this.documentElement)
-			var aItems = this.evaluate(cXPathString, xNode, oNSResolver,
-				XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)
-			var aResult = [];
-		for (var i = 0; i < aItems.snapshotLength; i++) {
-			aResult[i] = aItems.snapshotItem(i);
-		}
-		return aResult;
-	}
-
-	// prototying the XMLDocument selectSingleNode
-	XMLDocument.prototype.selectSingleNode = function (cXPathString, xNode) {
-		if (!xNode) {
-			xNode = this;
-		}
-		var xItems = this.selectNodes(cXPathString, xNode);
-		if (xItems.length > 0) {
-			return xItems[0];
-		} else {
-			return null;
+try {
+	// check for XMLDocument implementation
+	if (XMLDocument) {
+		if (!XMLDocument.prototype.loadXML) {
+			XMLDocument.prototype.loadXML = function (xmlString) {
+				if (this === undefined || this === null)
+					throw new TypeError('"XMLDocument.prototype.loadXML" is NULL or not defined');
+				var childNodes = getChildren(this);
+				for (var i = childNodes.length - 1; i >= 0; i--)
+					this.removeChild(childNodes[i]);
+				var dp = new DOMParser();
+				var newDOM = dp.parseFromString(xmlString, "text/xml");
+				var newElt = this.importNode(newDOM.documentElement, true);
+				this.appendChild(newElt);
+			};
 		}
 	}
 
-}
-
-if (!Array.prototype.indexOf) {
-	Array.prototype.indexOf = function (searchElement, fromIndex) {
-		if (this === undefined || this === null)
-			throw new TypeError('"Array.prototype.indexOf" is NULL or not defined');
-		var length = this.length >>> 0; //Convert object.length to UInt32
-		//alert(searchElement.constructor.toString());
-		fromIndex = +fromIndex || 0;
-		if (Math.abs(fromIndex) === Infinity)
-			fromIndex = 0;
-		if (fromIndex < 0) {
-			fromIndex += length;
-			if (fromIndex < 0) {
-				fromIndex = 0;
+	// check for XPath implementation
+	if (document.implementation.hasFeature("XPath", "3.0")) {
+		// prototying the XMLDocument selectNodes
+		XMLDocument.prototype.selectNodes = function (cXPathString, xNode) {
+			if (!xNode) {
+				xNode = this;
 			}
-		}
-		for (; fromIndex < length; fromIndex++) {
-			if (this[fromIndex] === searchElement)
-				return fromIndex;
-		}
-		return -1;
-	};
-};
-if (!Array.prototype.isEmpty) {
-	Array.prototype.isEmpty = function () {
-		if (this === undefined || this === null)
-			throw new TypeError('"Array.prototype.isEmpty" is NULL or not defined');
-		if (this.length < 1)
-			return true;
-		return false;
-	};
-}
-
-if (!String.prototype.contains) {
-	String.prototype.contains = function (searchString) {
-		if (this === undefined || this === null)
-			throw new TypeError('"String.prototype.contains" is NULL or not defined');
-		if (this.indexOf(searchString) !== -1)
-			return true;
-		return false;
-	};
-}
-if (!String.prototype.isEmpty) {
-	String.prototype.isEmpty = function () {
-		if (this === undefined || this === null)
-			throw new TypeError('"String.prototype.isEmpty" is NULL or not defined');
-		if (this.length < 1)
-			return true;
-		return false;
-	};
-}
-if (!String.prototype.repeat) {
-	String.prototype.repeat = function (count) {
-		'use strict';
-		if (this == null) {
-			throw new TypeError('can\'t convert ' + this + ' to object');
-		}
-		var str = '' + this;
-		count = +count;
-		if (count != count) {
-			count = 0;
-		}
-		if (count < 0) {
-			throw new RangeError('repeat count must be non-negative');
-		}
-		if (count == Infinity) {
-			throw new RangeError('repeat count must be less than infinity');
-		}
-		count = Math.floor(count);
-		if (str.length == 0 || count == 0) {
-			return '';
-		}
-		// Ensuring count is a 31-bit integer allows us to heavily optimize the
-		// main part. But anyway, most current (August 2014) browsers can't handle
-		// strings 1 << 28 chars or longer, so:
-		if (str.length * count >= 1 << 28) {
-			throw new RangeError('repeat count must not overflow maximum string size');
-		}
-		var rpt = '';
-		for (; ; ) {
-			if ((count & 1) == 1) {
-				rpt += str;
+			var oNSResolver = this.createNSResolver(this.documentElement)
+				var aItems = this.evaluate(cXPathString, xNode, oNSResolver,
+					XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)
+				var aResult = [];
+			for (var i = 0; i < aItems.snapshotLength; i++) {
+				aResult[i] = aItems.snapshotItem(i);
 			}
-			count >>>= 1;
-			if (count == 0) {
-				break;
-			}
-			str += str;
+			return aResult;
 		}
-		// Could we try:
-		// return Array(count + 1).join(this);
-		return rpt;
-	}
-}
 
-if (!Event.prototype.preventDefault) {
-	Event.prototype.preventDefault = function () {
-		this.returnValue = false;
-	};
-}
-if (!Event.prototype.stopPropagation) {
-	Event.prototype.stopPropagation = function () {
-		this.cancelBubble = true;
-	};
-}
-
-if (!Element.prototype.addEventListener) {
-	var eventListeners = [];
-
-	var addEventListener = function (type, listener /*, useCapture (will be ignored) */
-	) {
-		var self = this;
-		var wrapper = function (e) {
-			e.target = e.srcElement;
-			e.currentTarget = self;
-			if (typeof listener.handleEvent != 'undefined') {
-				listener.handleEvent(e);
+		// prototying the XMLDocument selectSingleNode
+		XMLDocument.prototype.selectSingleNode = function (cXPathString, xNode) {
+			if (!xNode) {
+				xNode = this;
+			}
+			var xItems = this.selectNodes(cXPathString, xNode);
+			if (xItems.length > 0) {
+				return xItems[0];
 			} else {
-				listener.call(self, e);
+				return null;
 			}
+		}
+	}
+} catch (e) {}
+
+try {
+	if (!Array.prototype.indexOf) {
+		Array.prototype.indexOf = function (searchElement, fromIndex) {
+			if (this === undefined || this === null)
+				throw new TypeError('"Array.prototype.indexOf" is NULL or not defined');
+			var length = this.length >>> 0; //Convert object.length to UInt32
+			//alert(searchElement.constructor.toString());
+			fromIndex = +fromIndex || 0;
+			if (Math.abs(fromIndex) === Infinity)
+				fromIndex = 0;
+			if (fromIndex < 0) {
+				fromIndex += length;
+				if (fromIndex < 0) {
+					fromIndex = 0;
+				}
+			}
+			for (; fromIndex < length; fromIndex++) {
+				if (this[fromIndex] === searchElement)
+					return fromIndex;
+			}
+			return -1;
 		};
-		if (type == "DOMContentLoaded") {
-			var wrapper2 = function (e) {
-				if (document.readyState == "complete") {
-					wrapper(e);
+	};
+	if (!Array.prototype.isEmpty) {
+		Array.prototype.isEmpty = function () {
+			if (this === undefined || this === null)
+				throw new TypeError('"Array.prototype.isEmpty" is NULL or not defined');
+			if (this.length < 1)
+				return true;
+			return false;
+		};
+	}
+} catch (e) {}
+
+try {
+	if (!String.prototype.contains) {
+		String.prototype.contains = function (searchString) {
+			if (this === undefined || this === null)
+				throw new TypeError('"String.prototype.contains" is NULL or not defined');
+			if (this.indexOf(searchString) !== -1)
+				return true;
+			return false;
+		};
+	}
+	if (!String.prototype.isEmpty) {
+		String.prototype.isEmpty = function () {
+			if (this === undefined || this === null)
+				throw new TypeError('"String.prototype.isEmpty" is NULL or not defined');
+			if (this.length < 1)
+				return true;
+			return false;
+		};
+	}
+	if (!String.prototype.repeat) {
+		String.prototype.repeat = function (count) {
+			'use strict';
+			if (this == null) {
+				throw new TypeError('can\'t convert ' + this + ' to object');
+			}
+			var str = '' + this;
+			count = +count;
+			if (count != count) {
+				count = 0;
+			}
+			if (count < 0) {
+				throw new RangeError('repeat count must be non-negative');
+			}
+			if (count == Infinity) {
+				throw new RangeError('repeat count must be less than infinity');
+			}
+			count = Math.floor(count);
+			if (str.length == 0 || count == 0) {
+				return '';
+			}
+			// Ensuring count is a 31-bit integer allows us to heavily optimize the
+			// main part. But anyway, most current (August 2014) browsers can't handle
+			// strings 1 << 28 chars or longer, so:
+			if (str.length * count >= 1 << 28) {
+				throw new RangeError('repeat count must not overflow maximum string size');
+			}
+			var rpt = '';
+			for (; ; ) {
+				if ((count & 1) == 1) {
+					rpt += str;
+				}
+				count >>>= 1;
+				if (count == 0) {
+					break;
+				}
+				str += str;
+			}
+			// Could we try:
+			// return Array(count + 1).join(this);
+			return rpt;
+		}
+	}
+} catch (e) {}
+
+try {
+	if (!Event.prototype.preventDefault) {
+		Event.prototype.preventDefault = function () {
+			this.returnValue = false;
+		};
+	}
+	if (!Event.prototype.stopPropagation) {
+		Event.prototype.stopPropagation = function () {
+			this.cancelBubble = true;
+		};
+	}
+} catch (e) {}
+
+try {
+	function getElements(arrayOfElements, tag, firstOccurence) {
+		var result = [];
+		var arrLength = arrayOfElements.length;
+		if (firstOccurence && arrLength > 1)
+			arrLength = 1;
+		for (var i = 0; i < arrLength; i++) {
+			var foundElements = arrayOfElements[i].getElementsByTagName(tag);
+			var foundElementslength = foundElements.length;
+			if (firstOccurence && foundElementslength > 1)
+				foundElementslength = 1;
+			for (var z = 0; z < foundElementslength; z++) {
+				result.push(foundElements[z]);
+			}
+		}
+		return result;
+	}
+	if (!Element.prototype.addEventListener) {
+		var eventListeners = [];
+
+		var addEventListener = function (type, listener /*, useCapture (will be ignored) */
+		) {
+			var self = this;
+			var wrapper = function (e) {
+				e.target = e.srcElement;
+				e.currentTarget = self;
+				if (typeof listener.handleEvent != 'undefined') {
+					listener.handleEvent(e);
+				} else {
+					listener.call(self, e);
 				}
 			};
-			document.attachEvent("onreadystatechange", wrapper2);
-			eventListeners.push({
-				object : this,
-				type : type,
-				listener : listener,
-				wrapper : wrapper2
-			});
+			if (type == "DOMContentLoaded") {
+				var wrapper2 = function (e) {
+					if (document.readyState == "complete") {
+						wrapper(e);
+					}
+				};
+				document.attachEvent("onreadystatechange", wrapper2);
+				eventListeners.push({
+					object : this,
+					type : type,
+					listener : listener,
+					wrapper : wrapper2
+				});
 
-			if (document.readyState == "complete") {
-				var e = new Event();
-				e.srcElement = window;
-				wrapper2(e);
-			}
-		} else {
-			this.attachEvent("on" + type, wrapper);
-			eventListeners.push({
-				object : this,
-				type : type,
-				listener : listener,
-				wrapper : wrapper
-			});
-		}
-	};
-	var removeEventListener = function (type, listener /*, useCapture (will be ignored) */
-	) {
-		var counter = 0;
-		while (counter < eventListeners.length) {
-			var eventListener = eventListeners[counter];
-			if (eventListener.object == this && eventListener.type == type && eventListener.listener == listener) {
-				if (type == "DOMContentLoaded") {
-					this.detachEvent("onreadystatechange", eventListener.wrapper);
-				} else {
-					this.detachEvent("on" + type, eventListener.wrapper);
+				if (document.readyState == "complete") {
+					var e = new Event();
+					e.srcElement = window;
+					wrapper2(e);
 				}
-				eventListeners.splice(counter, 1);
-				break;
+			} else {
+				this.attachEvent("on" + type, wrapper);
+				eventListeners.push({
+					object : this,
+					type : type,
+					listener : listener,
+					wrapper : wrapper
+				});
 			}
-			++counter;
+		};
+		var removeEventListener = function (type, listener /*, useCapture (will be ignored) */
+		) {
+			var counter = 0;
+			while (counter < eventListeners.length) {
+				var eventListener = eventListeners[counter];
+				if (eventListener.object == this && eventListener.type == type && eventListener.listener == listener) {
+					if (type == "DOMContentLoaded") {
+						this.detachEvent("onreadystatechange", eventListener.wrapper);
+					} else {
+						this.detachEvent("on" + type, eventListener.wrapper);
+					}
+					eventListeners.splice(counter, 1);
+					break;
+				}
+				++counter;
+			}
+		};
+
+		Element.prototype.addEventListener = addEventListener;
+		Element.prototype.removeEventListener = removeEventListener;
+
+		if (HTMLDocument) {
+			HTMLDocument.prototype.addEventListener = addEventListener;
+			HTMLDocument.prototype.removeEventListener = removeEventListener;
 		}
-	};
-	Element.prototype.addEventListener = addEventListener;
-	Element.prototype.removeEventListener = removeEventListener;
-	if (HTMLDocument) {
-		HTMLDocument.prototype.addEventListener = addEventListener;
-		HTMLDocument.prototype.removeEventListener = removeEventListener;
+		if (Window) {
+			Window.prototype.addEventListener = addEventListener;
+			Window.prototype.removeEventListener = removeEventListener;
+		}
 	}
-	if (Window) {
-		Window.prototype.addEventListener = addEventListener;
-		Window.prototype.removeEventListener = removeEventListener;
+	if (!Element.prototype.getAttribute) {
+		Element.prototype.getAttribute = function (attrName) {
+			if (this === undefined || this === null)
+				throw new TypeError('"Element.prototype.getAttribute" is NULL or not defined');
+			var attributes = this.attributes;
+			var attributesCount = attributes.length;
+			var result = attributes.getNamedItem(attrName);
+			return result;
+		};
 	}
-}
-if (!Element.prototype.getAttribute) {
-	Element.prototype.getAttribute = function (attrName) {
-		if (this === undefined || this === null)
-			throw new TypeError('"Element.prototype.getAttribute" is NULL or not defined');
-		var attributes = this.attributes;
-		var attributesCount = attributes.length;
-		var result = attributes.getNamedItem(attrName);
-		return result;
-	};
-}
-if (!Element.prototype.selectNodes) {
-	// prototying the Element selectNodes
-	Element.prototype.selectNodes = function (cXPathString) {
-		if (this === undefined || this === null)
-			throw new TypeError('"Element.prototype.selectNodes" is NULL or not defined');
-		if (this.ownerDocument.selectNodes) {
-			return this.ownerDocument.selectNodes(cXPathString, this);
-		} else {
-			throw new TypeError('For XML Elements Only');
-		}
-	};
-}
-if (!Element.prototype.selectSingleNode) {
-	// prototying the Element selectSingleNode
-	Element.prototype.selectSingleNode = function (cXPathString) {
-		if (this === undefined || this === null)
-			throw new TypeError('"Element.prototype.selectSingleNode" is NULL or not defined');
-		if (this.ownerDocument.selectSingleNode) {
-			return this.ownerDocument.selectSingleNode(cXPathString, this);
-		} else {
-			throw new TypeError('For XML Elements Only');
-		}
-	};
-}
+	if (!Element.prototype.namedItem) {
+		Element.prototype.namedItem = function (itemName) {
+			if (this === undefined || this === null)
+				throw new TypeError('"Element.prototype.namedItem" is NULL or not defined');
+			var children = getChildren(this);
+			var childrenCount = children.length;
+			var result='';
+			for (var i=0;i<childrenCount;i++){
+				if (children[i].name === itemName) result=children[i];
+			}
+			return result;
+		};
+	}
+	if (!Element.prototype.selectNodes) {
+		// prototying the Element selectNodes
+		var selectNodes = function (cXPathString) {
+			if (this === undefined || this === null)
+				throw new TypeError('"Element.prototype.selectNodes" is NULL or not defined');
+			if (this.ownerDocument.selectNodes) {
+				return this.ownerDocument.selectNodes(cXPathString, this);
+			} else {
+				var result = [];
+				var tags = cXPathString.split('/');
+				var curTag = this.getElementsByTagName(tags[1]);
+				if (tags.length > 2) {
+					for (var currentTag = 2; currentTag < tags.length; currentTag++) {
+						curTag = getElements(curTag, tags[currentTag]);
+					}
+				}
+				switch (tags[0]) {
+				case '..':
+					result = curTag;
+					break;
+				case '.':
+					var curTaglength = curTag.length;
+					for (var x = 0; x < curTaglength; x++) {
+						if (curTag[x].parentNode === this) {
+							result.push(curTag[x]);
+						}
+					};
+					break;
+				}
+				return result;
+				//throw new TypeError('For XML Elements Only');
+			}
+		};
+
+		Element.prototype.selectNodes = selectNodes;
+	}
+	if (!Element.prototype.selectSingleNode) {
+		// prototying the Element selectSingleNode
+		var selectSingleNode = function (cXPathString) {
+			if (this === undefined || this === null)
+				throw new TypeError('"Element.prototype.selectSingleNode" is NULL or not defined');
+			if (this.ownerDocument.selectSingleNode) {
+				return this.ownerDocument.selectSingleNode(cXPathString, this);
+			} else {
+				var result = [];
+				var tags = cXPathString.split('/');
+				var curTag = this.getElementsByTagName(tags[1]);
+				if (tags.length > 2) {
+					for (var currentTag = 2; currentTag < tags.length; currentTag++) {
+						curTag = getElements(curTag, tags[currentTag], true);
+					}
+				}
+				switch (tags[0]) {
+				case '..':
+					result = curTag;
+					break;
+				case '.':
+					var curTaglength = curTag.length;
+					for (var x = 0; x < curTaglength; x++) {
+						if (curTag[x].parentNode === this) {
+							result.push(curTag[x]);
+						}
+					};
+					break;
+				}
+				return result;
+
+			}
+		};
+		Element.prototype.selectSingleNode = selectSingleNode;
+	}
+} catch (e) {}
 
 // ------------------------------     UTILS     ------------------------------
 function getXMLObject(probablyXML, isText) {
+	var result = '';
 	//console.log('getXMLObject(probablyXML:' + probablyXML + ', isText: ' + isText + ')');
 	try {
 		if (isText) {
-			if (XMLDocument) {
+			try {
 				result = new XMLDocument();
 				result.load(probablyXML);
-			} else {
+			} catch (e) {
 				result = new ActiveXObject("Microsoft.XMLDOM");
 				result.async = false;
 				result.loadXML(probablyXML);
@@ -280,13 +369,13 @@ function getXMLObject(probablyXML, isText) {
 				var tryAgain = true;
 
 				if (probablyXML.responseXML && probablyXML.responseXML.documentElement) {
-					var children = (probablyXML.responseXML.children || probablyXML.responseXML.childNodes);
+					var children = getChildren(probablyXML.responseXML);
 					if (children.length > 0) {
 						if (probablyXML.responseXML.documentElement.nodeName === "parsererror") {
 							result = {
 								parseError : {
 									errorCode : 1,
-									reason : probablyXML.responseXML.documentElement.childNodes[0].nodeValue
+									reason : getChildren(probablyXML.responseXML.documentElement)[0].nodeValue
 								}
 							};
 						} else {
@@ -385,22 +474,22 @@ function getElementsByClassName(htmlDocument, className) {
 }
 
 function isCheckedBox(checkBoxId) {
-	//console.log('isCheckedBox(checkBoxId:'+checkBoxId+')');
+	//console.log('isCheckedBox(checkBoxId:' + checkBoxId + ')');
 	var result = false;
 	try {
 		result = document.getElementById(checkBoxId).checked;
 	} catch (e) {
-		//console.error ('isCheckedBox(): ' + e.description);
+		//console.error('isCheckedBox(): ' + e.description);
 		//Ой, что-то не получилось
 	}
-	//console.log('isCheckedBox('+checkBoxId+'): '+ result);
+	//console.log('isCheckedBox(' + checkBoxId + '): ' + result);
 	return result;
 }
 
 function getAllSiblings(nodeThatFired) {
-	//console.log('getAllSiblings(nodeThatFired:'+nodeThatFired+')');
+	//console.log('getAllSiblings(nodeThatFired:' + nodeThatFired + ')');
 	var result = [];
-	var node = nodeThatFired.parentNode.childNodes[0];
+	var node = getChildren(nodeThatFired.parentNode)[0];
 	while (node) {
 		if (node.nodeType === 1 && node !== nodeThatFired) {
 			result.push(node);
@@ -411,20 +500,20 @@ function getAllSiblings(nodeThatFired) {
 }
 
 function isNumeric(sValue) {
-	//console.log('isNumeric(sValue:'+sValue+')');
+	//console.log('isNumeric(sValue:' + sValue + ')');
 	var result = false;
 	try {
 		var z = parseFloat(sValue);
 		result = (z * 0 === 0);
 	} catch (e) {
-		//console.error ('isNumeric(): ' + e.description);
+		//console.error('isNumeric(): ' + e.description);
 	}
-	//console.log('isNumeric('+sValue+'): '+ result);
+	//console.log('isNumeric(' + sValue + '): ' + result);
 	return result;
 }
 
 function getParam(paramMap, paramName, isMulty) {
-	//console.log('getParam(paramMap:'+paramMap+', paramName:'+paramName+', isMulty:'+isMulty+')');
+	//console.log('getParam(paramMap:' + paramMap + ', paramName:' + paramName + ', isMulty:' + isMulty + ')');
 	var result = '';
 	var append = false;
 	try {
@@ -440,13 +529,13 @@ function getParam(paramMap, paramName, isMulty) {
 	finally {
 		if (!result)
 			result = '';
-		//console.log('getParam(paramMap,'+paramName+', isMulty: '+ isMulty + '): '+ result);
+		//console.log('getParam(paramMap,' + paramName + ', isMulty: ' + isMulty + '): ' + result);
 		return result;
 	}
 }
 
 function xmlFormatter(xml) {
-	//console.log('xmlFormatter(xml:'+xml+')');
+	//console.log('xmlFormatter(xml:' + xml + ')');
 	xml = xml.toString(); // привести к строке на случай, если xml - это объект
 	xml = xml.replace(/(>)\s*(<)(\/*)/g, '$1\n$2$3'); // удалить пробелы между тэгами (<tag>      </tag>), заменив их на символ \n, итоговый результат: >\n</
 	xml = xml.replace(/ *(.*) +\n/g, '$1\n'); // вставить символ \n после последовательности |      some text    \n|, итоговый результат: |      some text    \n\n|
@@ -508,7 +597,7 @@ function xmlFormatter(xml) {
 };
 
 function Timer(ms) {
-	//console.log('Timer(ms:'+ms+')');
+	//console.log('Timer(ms:' + ms + ')');
 	var tresult;
 	var d = new Date();
 	var milliseconds = d.getTime();
@@ -519,13 +608,13 @@ function Timer(ms) {
 }
 
 function LenB(str) {
-	//console.log('LenB(str:'+str+')');
+	//console.log('LenB(str:' + str + ')');
 	var m = encodeURIComponent(str).match(/%[89ABab]/g);
 	return str.length + (m ? m.length : 0);
 }
 
 function setFormData(arrData, typeData) {
-	//console.log('setFormData(arrData:'+arrData+', typeData:'+typeData+')');
+	//console.log('setFormData(arrData:' + arrData + ', typeData:' + typeData + ')');
 	var body = [];
 	var isPush = false;
 	var nodeValue = "",
@@ -589,7 +678,7 @@ function setFormData(arrData, typeData) {
 }
 
 function trim(str, charlist) {
-	//console.log('trim(str:'+str+', charlist:'+charlist+')');
+	//console.log('trim(str:' + str + ', charlist:' + charlist + ')');
 	str = !str ? '' : str;
 	charlist = !charlist ? ' \xA0' : charlist.replace(/([\[\]\(\)\.\?\/\*\{\}\+\$\^\:])/g, '\$1');
 	var re = new RegExp('^[' + charlist + ']+|[' + charlist + ']+$', 'g');
@@ -597,7 +686,7 @@ function trim(str, charlist) {
 }
 
 function convert2win1251(string) {
-	//console.log('convert2win1251(string:'+string+')');
+	//console.log('convert2win1251(string:' + string + ')');
 	var russian = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'З', 'И', 'Й', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ы', 'Ь', 'Э', 'Ю', 'Я', 'а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ы', 'ь', 'э', 'ю', 'я'];
 	var win1251 = ['%c0', '%c1', '%c2', '%c3', '%c4', '%c5', '%c6', '%c7', '%c8', '%c9', '%ca', '%cb', '%cc', '%cd', '%ce', '%cf', '%d0', '%d1', '%d2', '%d3', '%d4', '%d5', '%d6', '%d7', '%d8', '%d9', '%da', '%db', '%dc', '%dd', '%de', '%df', '%e0', '%e1', '%e2', '%e3', '%e4', '%e5', '%e6', '%e7', '%e8', '%e9', '%ea', '%eb', '%ec', '%ed', '%ee', '%ef', '%f0', '%f1', '%f2', '%f3', '%f4', '%f5', '%f6', '%f7', '%f8', '%f9', '%fa', '%fb', '%fc', '%fd', '%fe', '%ff'];
 	for (var i = 0; i < russian.length; i++) {
@@ -607,7 +696,7 @@ function convert2win1251(string) {
 }
 
 function replaceHTML(string2clear) {
-	//console.log('replaceHTML(string2clear:'+string2clear+')');
+	//console.log('replaceHTML(string2clear:' + string2clear + ')');
 	var nonxmlEntities = ['&', '<', '>', '"', "'"];
 	var xmlEntities = ['&amp;', '&lt;', '&gt;', '&quot;', "&apos;"];
 	for (var i = 0; i < nonxmlEntities.length; i++) {
@@ -617,7 +706,7 @@ function replaceHTML(string2clear) {
 }
 
 function HTMLreplace(string2clear) {
-	//console.log('HTMLreplace(string2clear:'+string2clear+')');
+	//console.log('HTMLreplace(string2clear:' + string2clear + ')');
 	var nonxmlEntities = ['&', '<', '>', '"', "'"];
 	var xmlEntities = ['&amp;', '&lt;', '&gt;', '&quot;', "&apos;"];
 	for (var i = 0; i < nonxmlEntities.length; i++) {
@@ -627,7 +716,7 @@ function HTMLreplace(string2clear) {
 }
 
 function getXmlValue(srcXML, tagName, isBoolean) {
-	//console.log('getXmlValue(srcXML, tagName:'+tagName+', isBoolean:'+isBoolean+')');
+	//console.log('getXmlValue(srcXML, tagName:' + tagName + ', isBoolean:' + isBoolean + ')');
 	var result = '';
 	try {
 		var elementsList = srcXML.getElementsByTagName(tagName);
@@ -650,25 +739,24 @@ function getXmlValue(srcXML, tagName, isBoolean) {
 function dictionary() {
 	this.key = [];
 	this.value = [];
-	
-	this.toString = function() {
-		var result='';
+
+	this.toString = function () {
+		var result = '';
 		var keysLength = this.key.length;
 		for (var i = 0; i < keysLength; i++) {
-			result+=this.key[i] + ': ' + this.value[i] + '\r\n';
+			result += this.key[i] + ': ' + this.value[i] + '\r\n';
 		}
 		return result;
 	}
-	
+
 	this.add = function (strKey, strValue, force) {
 		var keysLength = this.key.length;
 		for (var i = 0; i < keysLength; i++) {
 			if (this.key[i] === strKey)
 				if (force) {
-					this.value[i]=strValue;
+					this.value[i] = strValue;
 					return true;
-				}
-				else {
+				} else {
 					return false;
 				}
 		}
@@ -708,4 +796,17 @@ function dictionary() {
 	this.sort = function () {
 		this.key.sort();
 	};
+}
+
+function getChildren(nodeElement) {
+	if (nodeElement.children)
+		return nodeElement.children;
+	var result = [];
+	var childNodes = nodeElement.childNodes;
+	var childNodeslength = childNodes.length;
+	for (var node = 0; node < childNodeslength; node++) {
+		if (childNodes[node].nodeType === 1)
+			result.push(childNodes[node]);
+	}
+	return result;
 }

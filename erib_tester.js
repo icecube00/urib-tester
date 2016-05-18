@@ -147,31 +147,39 @@ function prepareChoiceAddr() {
 
 function eribAddressConf() {
 	try {
-		document.getElementById('settings').addEventListener('mouseleave', Version, true);
+		//document.getElementById('settings').addEventListener('mouseleave', Version, true);
+		document.getElementById('settings').onmouseleave = function onmouseleave(event) {
+			Version('');
+		}
 	} catch (e) {}
 	this.get = function () {
 		var eribAddress = '---';
-		for (var i = 0; i < 2; i++)
-			if (choiceAddr[i].childNodes[0].checked)
-				eribAddress = choiceAddr[i].childNodes[1].value;
+		for (var i = 0; i < 2; i++) {
+			var choosenAddrChildren = getChildren(choiceAddr[i]);
+			if (choosenAddrChildren[0].checked)
+				eribAddress = choosenAddrChildren[1].value;
+		}
 		//console.log('eribAddressConf.get(): eribAddress: ' + eribAddress );
 		return eribAddress;
 	};
 	this.set = function (eribAddress) {
 		//console.log('eribAddressConf.set(eribAddress: ' + eribAddress + ')');
-		if (choiceAddr[0].childNodes[0].checked)
-			choiceAddr[0].childNodes[1].value = eribAddress;
+		var choosenAddrChildren = getChildren(choiceAddr[0]);
+		if (choosenAddrChildren[0].checked)
+			choosenAddrChildren[1].value = eribAddress;
 	};
 	this.options = function () {
 		//console.log('eribAddressConf.options()');
-		if (choiceAddr[1].childNodes[0].checked)
-			return choiceAddr[1].childNodes[1].options;
+		var choosenAddrChildren = getChildren(choiceAddr[1]);
+		if (choosenAddrChildren[0].checked)
+			return choosenAddrChildren[1].options;
 		return [];
 	};
 	this.add = function (newoption) {
 		//console.log('eribAddressConf.add(newoption)');
-		if (choiceAddr[1].childNodes[0].checked)
-			choiceAddr[1].childNodes[1].add(newoption);
+		var choosenAddrChildren = getChildren(choiceAddr[1]);
+		if (choosenAddrChildren[0].checked)
+			choosenAddrChildren[1].add(newoption);
 	};
 
 }
@@ -535,7 +543,12 @@ function HttpRequest(URL, FormData, typeData, requestType, isIt4Save, getJSON, a
 		warnText += err.description;
 		//console.warn('HttpRequest: ' + warnText);
 	}
-	newhttp.open(requestType, URL + '?' + Timer(), async);
+	try {
+		newhttp.open(requestType, URL + '?' + Timer(), async);
+	} catch(e0){
+		strTimeout = " Не удалось получить ответ от удаленного сервера\r\n" + e0.name + ":" + e0.message;
+		//console.warn('HttpRequest: ' + strTimeout);
+	}
 	newhttp.onreadystatechange = function () {
 		if (newhttp.readyState !== 4) {}
 		else {
@@ -654,7 +667,7 @@ function erib_structure(xmlObject) {
 		//console.error('erib_structure: ' + err.description);
 		try {
 			if (xmlObject.documentElement.nodeName === "parsererror")
-				errorXMLParser = xmlObject.documentElement.childNodes[0].nodeValue;
+				errorXMLParser = getChildren(xmlObject.documentElement)[0].nodeValue;
 		} catch (eerrr) {
 			//console.error('erib_structure: Fatal error. Could not parse XML.\r\n' + eerrr.description);
 			errorXMLParser = "Fatal error. Could not parse XML.";
@@ -1046,7 +1059,7 @@ function erib_structure(xmlObject) {
 		for (var i = 0; i < fields_name.length; i++) {
 			//Проверка на то, что анализируемое поле относится к типу Field
 			//Убеждаемся, что у поля name нет иных детей, кроме TEXT_NODE
-			if (fields_name[i].childNodes.length === 1) {
+			if (getChildren(fields_name[i]).length === 1) {
 				//Прыгаем на уровень выше, чтобы работать с ЕРИБовским элементом типа Field
 				var tempField = fields_name[i].parentNode;
 				isParent = false,
@@ -1198,13 +1211,14 @@ function erib_structure(xmlObject) {
 		var listOfChildren = [];
 		var listItem = [];
 		var isPush = false;
-		var children = xmlParentObj.childNodes;
+		var children = getChildren(xmlParentObj);
 		for (var i = 0; i < children.length; i++) {
-			var childrenLength = children[i].childNodes.length;
+			var __children = getChildren(children[i]);
+			var childrenLength = __children.length;
 			if (childrenLength > 0) {
-				var curListItems = children[i].tagName + '//' + children[i].childNodes[childrenLength - 1].tagName;
+				var curListItems = children[i].tagName + '//' + __children[childrenLength - 1].tagName;
 				if (listNodes.indexOf(curListItems) !== -1) {
-					var listItems = xmlParentObj.getElementsByTagName(children[i].childNodes[childrenLength - 1].tagName);
+					var listItems = xmlParentObj.getElementsByTagName(__children[childrenLength - 1].tagName);
 					listItem = [];
 					isPush = true;
 					for (var j = 0; j < listItems.length; j++) {
@@ -1271,7 +1285,7 @@ function erib_structure(xmlObject) {
 							});
 							notListed = false;
 						}
-						if (notListed && currentNode.childNodes.length > 0) {
+						if (notListed && getChildren(currentNode).length > 0) {
 							var tryList = [];
 							tryList = enumChildren(currentNode, index + 1);
 							if (tryList.length > 0) {
@@ -1279,10 +1293,10 @@ function erib_structure(xmlObject) {
 								notListed = false;
 							}
 						}
-						if (notListed) {
+						/*if (notListed) {
 							var firstEntry = currentNode.firstChild;
 							getAllListItems(firstEntry, listEntry);
-						}
+						}*/
 						listItem.push(listEntry);
 					}
 				} else {
@@ -1479,7 +1493,7 @@ function erib_structure(xmlObject) {
 		var currentName = '';
 		if (parentName)
 			currentName = parentName + '//';
-		if (firstEntry.childNodes.length === 1)
+		if (getChildren(firstEntry).length === 1)
 			listEntry.listOfValues.push({
 				name : currentName + firstEntry.tagName,
 				value : firstEntry.text
@@ -1488,7 +1502,8 @@ function erib_structure(xmlObject) {
 			listEntry.id = firstEntry.text;
 		while (firstEntry.nextSibling !== null) {
 			firstEntry = firstEntry.nextSibling;
-			var nodeslength = firstEntry.childNodes.length;
+			var children = getChildren(firstEntry);
+			var nodeslength = children.length;
 			if (((firstEntry.tagName).toLowerCase()).contains("id"))
 				listEntry.id = firstEntry.text;
 			if (nodeslength === 1)
@@ -1497,7 +1512,7 @@ function erib_structure(xmlObject) {
 					value : firstEntry.text
 				});
 			if (nodeslength > 1) {
-				getAllListItems(firstEntry.childNodes[0], listEntry, firstEntry.tagName);
+				getAllListItems(children[0], listEntry, firstEntry.tagName);
 			}
 		}
 	}
@@ -2501,8 +2516,8 @@ function parseAnswer(result) {
 
 	if (eribEntity.isConfirm) {
 		var confirmOperation = document.getElementById("4.9.6.0");
-		confirmOperation.parentNode.childNodes[0].checked = true;
-		confirmOperation.parentNode.childNodes[0].setAttribute('checked', true);
+		getChildren(confirmOperation.parentNode)[0].checked = true;
+		getChildren(confirmOperation.parentNode)[0].setAttribute('checked', true);
 		confirmOperation.namedItem("id").value = eribEntity.documentId;
 		confirmOperation.namedItem("transactionToken").checked = true;
 		document.getElementById("4.9.6.0.transactionToken.value").value = eribEntity.transactionToken;
@@ -2510,22 +2525,22 @@ function parseAnswer(result) {
 	}
 	if (eribEntity.checkAvailable) {
 		var element = document.getElementById("4.9.11.0");
-		element.parentNode.childNodes[0].checked = true;
-		element.parentNode.childNodes[0].setAttribute('checked', true);
+		getChildren(element.parentNode)[0].checked = true;
+		getChildren(element.parentNode)[0].setAttribute('checked', true);
 		element.namedItem("id").value = eribEntity.documentId;
 		element.style.display = 'block';
 	}
 	if (eribEntity.templateAvailable) {
 		var element = document.getElementById("4.9.5.4.1");
-		element.parentNode.childNodes[0].checked = true;
-		element.parentNode.childNodes[0].setAttribute('checked', true);
+		getChildren(element.parentNode)[0].checked = true;
+		getChildren(element.parentNode)[0].setAttribute('checked', true);
 		element.namedItem("payment").value = eribEntity.documentId;
 		element.style.display = 'block';
 	}
 	if (eribEntity.autopayable) {
 		var element = document.getElementById("4.9.7.1.1");
-		element.parentNode.childNodes[0].checked = true;
-		element.parentNode.childNodes[0].setAttribute('checked', true);
+		getChildren(element.parentNode)[0].checked = true;
+		getChildren(element.parentNode)[0].setAttribute('checked', true);
 		element.namedItem("id").value = eribEntity.documentId;
 		element.style.display = 'block';
 	}
@@ -2534,8 +2549,8 @@ function parseAnswer(result) {
 		case 'chooseAgreement':
 			var chooseAgreement = document.getElementById("4.1.4");
 			var agreementBlockoperation = document.getElementById("4.1.4");
-			agreementBlockoperation.parentNode.childNodes[0].checked = true;
-			agreementBlockoperation.parentNode.childNodes[0].setAttribute('checked', true);
+			getChildren(agreementBlockoperation.parentNode)[0].checked = true;
+			getChildren(agreementBlockoperation.parentNode)[0].setAttribute('checked', true);
 			agreementBlockoperation.style.display = 'block';
 			break;
 		case 'loginCSA':
@@ -2567,8 +2582,8 @@ function parseAnswer(result) {
 				}
 			}
 			//var csaBlockoperation = document.getElementById("4.1.3");
-			loginCSA.parentNode.childNodes[0].checked = true;
-			loginCSA.parentNode.childNodes[0].setAttribute('checked', true);
+			getChildren(loginCSA.parentNode)[0].checked = true;
+			getChildren(loginCSA.parentNode)[0].setAttribute('checked', true);
 			loginCSA.style.display = 'block';
 			break;
 		}

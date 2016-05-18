@@ -1,4 +1,4 @@
-var scriptVersion = "2.1.01";
+var scriptVersion = "2.1.02";
 var eribOperations = new dictionary();
 var alter2spec = new dictionary();
 var arrayOfrequests = [];
@@ -17,7 +17,7 @@ function loadXML() {
 	} catch (err) {
 		//console.warn('loadXML(): Error:: ' + err.description);
 		try {
-			var children = (docXML.documentElement.children || docXML.documentElement.childNodes)
+			var children = getChildren(docXML.documentElement)
 			if (docXML.documentElement.nodeName === "parsererror")
 				errorXMLParser = children[0].nodeValue;
 		} catch (e) {
@@ -87,12 +87,16 @@ function buildMenu(operation) {
 	input.type = 'checkbox';
 	input.setAttributeNode(inpName);
 	input.setAttributeNode(inpClass);
+	input.onclick = function onclick(event){
+		toggleChildren();
+	}
+	/*
 	if (input.addEventListener) {
 		input.addEventListener("click", toggleChildren, false);
 	} else {
 		input.attachEvent("onclick", toggleChildren);
 	}
-
+	*/
 	var inpClick = document.createAttribute('onclick');
 	inpClick.value = 'toggleChildren("' + op_id + '");';
 	div.setAttributeNode(inpClick);
@@ -103,20 +107,20 @@ function buildMenu(operation) {
 	div.setAttributeNode(attId);
 	div.appendChild(input);
 	div.appendChild(spanTxt);
-	var innerChildren = (operation.children || operation.childNodes);
+	var innerChildren = getChildren(operation);
 	var childrenLength = innerChildren.length;
 	for (var child = 0; child < childrenLength; child++) {
 		var inner = innerChildren[child];
 		if (inner.nodeName === 'operation') {
-			var innerDiv = buildMenu(inner);
-			innerDiv.style.display = 'none';
-			div.appendChild(innerDiv);
-		}
-		if (inner.nodeName === 'request') {
-			var innerRequest = buildRequest(inner);
-			innerRequest.style.display = 'none';
-			div.appendChild(innerRequest);
-		}
+				var innerDiv = buildMenu(inner);
+				innerDiv.style.display = 'none';
+				div.appendChild(innerDiv);
+			}
+			if (inner.nodeName === 'request') {
+				var innerRequest = buildRequest(inner);
+				innerRequest.style.display = 'none';
+				div.appendChild(innerRequest);
+			}
 	}
 
 	return div;
@@ -137,7 +141,7 @@ function buildRequest(request) {
 
 	var action = request.selectNodes('./action')[0];
 	var tParams = action.selectNodes('./params')[0];
-	var params = (tParams.children || tParams.childNodes);
+	var params = getChildren(tParams);
 
 	var attCharset = document.createAttribute('accept-charset');
 	var attName = document.createAttribute('name');
@@ -336,7 +340,7 @@ function createChoice(param, req_id) {
 		var classOption = document.createAttribute('class');
 		classOption.value = 'option';
 		optionDiv.setAttributeNode(classOption);
-		var params = (choices[choice].children || choices[choice].childNodes);
+		var params = getChildren(choices[choice]);
 		var paramsLength = params.length;
 		for (var par = 0; par < paramsLength; par++) {
 			var br = document.createElement('br');
@@ -429,11 +433,11 @@ function toggleChildren(divId, isForm) {
 	var divChildren = [];
 
 	if (isForm) {
-		var children = (currentDiv.parentElement.children || currentDiv.parentElement.childNodes);
+		var children = getChildren(currentDiv.parentElement);
 		var input = children[0];
 		divChildren.push(currentDiv);
 	} else {
-		var children = (currentDiv.children || currentDiv.childNodes);
+		var children = getChildren(currentDiv);
 		var input = children[0];
 		var divChildren = children;
 	}
@@ -476,25 +480,34 @@ function buildSettings(setting) {
 
 var divChoices = [];
 function prepareDivChoice() {
-	divChoices = getElementsByClassName(document, "choice");
+	var __divChoices = getElementsByClassName(document, "choice");
+	for (var i = 0; i < __divChoices.length; i++) {
+		divChoices.push(getElementsByClassName(__divChoices[i], "option"));
+	}
 }
 
 function divChoice() {
 	//console.log('divChoice()');
 	for (var i = 0; i < divChoices.length; i++) {
-		var currentChoice = divChoices[i];
-		var divOptions = getElementsByClassName(currentChoice, "option");
+		var divOptions = divChoices[i];
 		for (var n = 0; n < divOptions.length; n++) {
 			(function (n) {
 				var currentOption = divOptions[n];
+				/*
 				currentOption.addEventListener('mouseover', function (event) {
 					addClass(currentOption, "choose1");
 				}, false);
 				currentOption.addEventListener('mouseleave', function (event) {
 					delClass(currentOption, "choose1");
 				}, true);
+				*/
+				currentOption.onmouseover = function onmouseover(event) {
+					addClass(currentOption, "choose1");
+				}
+				currentOption.onmouseleave = function onmouseleave(event) {
+					delClass(currentOption, "choose1");
+				}
 			})(n);
-
 			var checkedOptions = getElementsByClassName(divOptions[n], "ignore");
 			for (var x = 0; x < checkedOptions.length; x++) {
 				(function (x) {
