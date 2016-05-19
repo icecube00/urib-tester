@@ -545,7 +545,7 @@ function HttpRequest(URL, FormData, typeData, requestType, isIt4Save, getJSON, a
 	}
 	try {
 		newhttp.open(requestType, URL + '?' + Timer(), async);
-	} catch(e0){
+	} catch (e0) {
 		strTimeout = " Не удалось получить ответ от удаленного сервера\r\n" + e0.name + ":" + e0.message;
 		//console.warn('HttpRequest: ' + strTimeout);
 	}
@@ -983,8 +983,8 @@ function erib_structure(xmlObject) {
 		//Вариант comission - не интересен, потому что он только для чека и, корректно и однозначно описан
 		if (getXmlValue(xmlObject, "commission", true)) {
 			var newField = new erib_field();
-			newField.title = 'Комиссия'
-				newField.name = 'commission';
+			newField.title = 'Комиссия';
+			newField.name = 'commission';
 			//В случае CreateAutoSubscription поле commission может прилететь дважды o_O
 			var commission = xmlObject.getElementsByTagName("commission");
 			if (commission.length > 1)
@@ -997,8 +997,15 @@ function erib_structure(xmlObject) {
 				//Проверяем тип пришедшего поля - он может быть money или string
 				var thisFieldType = getXmlValue(commission[commField], "type");
 				if (!thisFieldType.isEmpty()) {
-					itemAmount.value = getXmlValue(commission[commField].getElementsByTagName(thisFieldType + "Type")[0], "value");
-					itemCurrency.value = getXmlValue(xmlObject.getElementsByTagName("commissionCurrency")[0].getElementsByTagName("stringType")[0], "value");
+					var commissionType = commission[commField].getElementsByTagName(thisFieldType + "Type");
+					if (commissionType.length > 0)
+						itemAmount.value = getXmlValue(commissionType[0], "value");
+					var commissionCurrency = xmlObject.getElementsByTagName("commissionCurrency");
+					if (commissionCurrency.length > 0) {
+						var stringType = commissionCurrency[0].getElementsByTagName("stringType");
+						if (stringType.length > 0)
+							itemCurrency.value = getXmlValue(stringType[0], "value");
+					}
 				} else {
 					itemAmount.value = getXmlValue(commission[0], "amount");
 					itemCurrency.value = getXmlValue(commission, "name");
@@ -1059,7 +1066,7 @@ function erib_structure(xmlObject) {
 		for (var i = 0; i < fields_name.length; i++) {
 			//Проверка на то, что анализируемое поле относится к типу Field
 			//Убеждаемся, что у поля name нет иных детей, кроме TEXT_NODE
-			if (getChildren(fields_name[i]).length === 1) {
+			if (getChildren(fields_name[i]).length === 0) {
 				//Прыгаем на уровень выше, чтобы работать с ЕРИБовским элементом типа Field
 				var tempField = fields_name[i].parentNode;
 				isParent = false,
@@ -1294,8 +1301,8 @@ function erib_structure(xmlObject) {
 							}
 						}
 						/*if (notListed) {
-							var firstEntry = currentNode.firstChild;
-							getAllListItems(firstEntry, listEntry);
+						var firstEntry = currentNode.firstChild;
+						getAllListItems(firstEntry, listEntry);
 						}*/
 						listItem.push(listEntry);
 					}
@@ -1327,8 +1334,13 @@ function erib_structure(xmlObject) {
 			result = formFields(this.document, divId);
 		}
 		if (isReceiptDocument) {
-			var half_add_2_40 = ' '.repeat(parseInt((40 - receiptTitle.length) / 2))
-				result = (half_add_2_40 + receiptTitle + '\r\n\r\n' + result).toUpperCase();
+			var half_add_2_40 = '';
+			try {
+				var half_add_2_40 = ' '.repeat(parseInt((40 - receiptTitle.length) / 2));
+			} catch (e) {
+				//console.error(e);
+			}
+			result = (half_add_2_40 + receiptTitle + '\r\n\r\n' + result).toUpperCase();
 		}
 		return result;
 	};
@@ -1519,21 +1531,47 @@ function erib_structure(xmlObject) {
 
 	this.getButtons = function (isSave) {
 		//console.log('erib_structure: getButtons(isSave:'+isSave+')');
-		var result = '';
-		var save2file = '';
-		if (checkAvailable)
-			result += "<input type='button' value='Печать чека' onclick='trySubmit(\"4.9.11.0\")'' />\r\n";
-		if (templateAvailable)
-			result += "<input type='button' value='Создать шаблон' onclick='trySubmit(\"4.9.5.4.1\")'' />\r\n";
-		if (autopayable)
-			result += "<input type='button' value='Создать АП' onclick='trySubmit(\"4.9.7.1.1\")'' />\r\n";
-		if (this.isConfirm)
-			result += "<input type='button' value='Подтвердить' onclick='trySubmit(\"4.9.6.0\")'' />\r\n";
-		if (localStatus.code() !== -1 && isSave) {
-			save2file += "<input class='save2File' type='button' value='Сохранить' onclick='saveToFile(\"" + tempFileName + "\")'' />\r\n";
-			return save2file;
+		var span = window.document.createElement('span');
+		//var save2file = '';
+		var button = function (buttonText, op_id) {
+			var input = window.document.createElement('input');
+			input.type = 'button';
+			input.onclick = function () {
+				trySubmit(op_id)
+			};
+
+			var inpValue = window.document.createAttribute('value');
+			inpValue.value = buttonText;
+			input.setAttributeNode(inpValue);
+
+			return input;
+		};
+		if (checkAvailable) {
+			span.appendChild(button('Печать чека', '4.9.11.0'));
 		}
-		return result;
+		if (templateAvailable) {
+			span.appendChild(button('Создать шаблон', '4.9.5.4.1'));
+		}
+		if (autopayable) {
+			span.appendChild(button('Создать АП', '4.9.7.1.1'));
+		}
+		if (this.isConfirm)
+			span.appendChild(button('Подтвердить', '4.9.6.0'));
+		if (localStatus.code() !== -1 && isSave) {
+			var save2File = button('Сохранить', '');
+			try {
+				save2File.onclick = function () {
+					saveToFile(tempFileName)
+				};
+			} catch (e) {
+				//console.error(e);
+			}
+			var save2fileClass = window.document.createAttribute('class');
+			save2fileClass.value = 'save2File';
+			save2File.setAttributeNode(save2fileClass);
+			return save2File;
+		}
+		return span;
 	};
 
 	function erib_field() {
@@ -1618,7 +1656,9 @@ function erib_structure(xmlObject) {
 			this.number = getXmlValue(srcXML, "number");
 			this.type = getXmlValue(srcXML, "type");
 			if (balanceAvailable) {
-				this.balance = new eribSum(srcXML.getElementsByTagName("amount")[0].parentNode);
+				var amount = srcXML.getElementsByTagName("amount");
+				if (amount.length > 0)
+					this.balance = new eribSum(amount[0].parentNode);
 			}
 
 			//regularPayment fields
@@ -1663,10 +1703,29 @@ function erib_structure(xmlObject) {
 		this.autoPaymentSupported = (getXmlValue(srcXML, "autoPaymentSupported") === 'true');
 		this.accountNumber = getXmlValue(srcXML, "accountNumber");
 		this.INN = getXmlValue(srcXML, "INN");
-		this.service = new eribService(srcXML.getElementsByTagName("service")[0]);
-		this.provider = new eribService(srcXML.getElementsByTagName("provider")[0]);
-		this.category = new eribService(srcXML.getElementsByTagName("category")[0]);
-		this.parent = new eribService(srcXML.getElementsByTagName("parent")[0]);
+		var newService = function (tagName) {
+			var service = srcXML.getElementsByTagName(tagName);
+			if (service.length > 0)
+				return (new eribService(service[0]));
+			return {
+				id : '',
+				type : '',
+				name : '',
+				title : '',
+				description : '',
+				guid : '',
+				img : {
+					id : -1,
+					URL : '',
+					updated : '00.00.0000T00:00:00'
+				},
+				providers : new productListObj()
+			};
+		}
+		this.service = newService("service");
+		this.provider = newService("provider");
+		this.category = newService("category");
+		this.parent = newService("parent");
 	}
 
 	function eribService(srcXML) {
@@ -1757,10 +1816,37 @@ function erib_structure(xmlObject) {
 		this.name = getXmlValue(srcXML, "firstName");
 		this.surName = getXmlValue(srcXML, "surName");
 		this.patrName = getXmlValue(srcXML, "patrName");
-		this.product = new eribProduct(srcXML.getElementsByTagName("card")[0]);
+		var card = srcXML.getElementsByTagName("card");
+		if (card.length > 0) {
+			this.product = new eribProduct(card[0]);
+		} else {
+			this.product = {
+				id : -1
+			}
+		}
 		this.clientType = getXmlValue(srcXML, "creationType");
-		this.clientRegion = new eribRegion(srcXML.getElementsByTagName("region")[0]);
-		this.atmRegion = new eribRegion(srcXML.getElementsByTagName("atmRegion")[0]);
+		var region = srcXML.getElementsByTagName("region");
+		if (region.length > 0) {
+			this.clientRegion = new eribRegion(region[0]);
+		} else {
+			this.clientRegion = {
+				id : -1,
+				name : "",
+				guid : "",
+				children : new productListObj()
+			}
+		}
+		var atmRegion = srcXML.getElementsByTagName("atmRegion");
+		if (atmRegion.length > 0) {
+			this.atmRegion = new eribRegion(atmRegion[0]);
+		} else {
+			this.atmRegion = {
+				id : -1,
+				name : "",
+				guid : "",
+				children : []
+			}
+		}
 		this.checkedUDBO = (getXmlValue(srcXML, "checkedUDBO") === 'true');
 		this.agreementList = new productListObj();
 		this.productsList = new productListObj();
@@ -2513,48 +2599,64 @@ function parseAnswer(result) {
 		erib_debug.innerHTML = "";
 		erib_debug.style.display = 'none';
 	}
-
+	var updateNextStep = function (elementId, namedItem) {
+		var element = document.getElementById(elementId);
+		var children = getChildren(element.parentNode);
+		children[0].checked = true;
+		children[0].setAttribute('checked', true);
+		var itemName = namedItem | 'id';
+		if (eribEntity.documentId)
+			element.namedItem(itemName).value = eribEntity.documentId;
+		element.style.display = 'block';
+		return element;
+	}
 	if (eribEntity.isConfirm) {
-		var confirmOperation = document.getElementById("4.9.6.0");
-		getChildren(confirmOperation.parentNode)[0].checked = true;
-		getChildren(confirmOperation.parentNode)[0].setAttribute('checked', true);
-		confirmOperation.namedItem("id").value = eribEntity.documentId;
+		var confirmOperation = updateNextStep("4.9.6.0");
+		//var confirmOperation = document.getElementById("4.9.6.0");
+		//getChildren(confirmOperation.parentNode)[0].checked = true;
+		//getChildren(confirmOperation.parentNode)[0].setAttribute('checked', true);
+		//confirmOperation.namedItem("id").value = eribEntity.documentId;
 		confirmOperation.namedItem("transactionToken").checked = true;
 		document.getElementById("4.9.6.0.transactionToken.value").value = eribEntity.transactionToken;
-		confirmOperation.style.display = 'block';
+		//confirmOperation.style.display = 'block';
 	}
 	if (eribEntity.checkAvailable) {
-		var element = document.getElementById("4.9.11.0");
-		getChildren(element.parentNode)[0].checked = true;
-		getChildren(element.parentNode)[0].setAttribute('checked', true);
-		element.namedItem("id").value = eribEntity.documentId;
-		element.style.display = 'block';
+		updateNextStep("4.9.11.0");
+		//var element = document.getElementById("4.9.11.0");
+		//getChildren(element.parentNode)[0].checked = true;
+		//getChildren(element.parentNode)[0].setAttribute('checked', true);
+		//element.namedItem("id").value = eribEntity.documentId;
+		//element.style.display = 'block';
 	}
 	if (eribEntity.templateAvailable) {
-		var element = document.getElementById("4.9.5.4.1");
-		getChildren(element.parentNode)[0].checked = true;
-		getChildren(element.parentNode)[0].setAttribute('checked', true);
-		element.namedItem("payment").value = eribEntity.documentId;
-		element.style.display = 'block';
+		updateNextStep("4.9.5.4.1", "payment");
+		//var element = document.getElementById("4.9.5.4.1");
+		//getChildren(element.parentNode)[0].checked = true;
+		//getChildren(element.parentNode)[0].setAttribute('checked', true);
+		//element.namedItem("payment").value = eribEntity.documentId;
+		//element.style.display = 'block';
 	}
 	if (eribEntity.autopayable) {
-		var element = document.getElementById("4.9.7.1.1");
-		getChildren(element.parentNode)[0].checked = true;
-		getChildren(element.parentNode)[0].setAttribute('checked', true);
-		element.namedItem("id").value = eribEntity.documentId;
-		element.style.display = 'block';
+		updateNextStep("4.9.7.1.1");
+		//var element = document.getElementById("4.9.7.1.1");
+		//getChildren(element.parentNode)[0].checked = true;
+		//getChildren(element.parentNode)[0].setAttribute('checked', true);
+		//element.namedItem("id").value = eribEntity.documentId;
+		//element.style.display = 'block';
 	}
 	if (eribEntity.isLogin) {
 		switch (eribEntity.loginType) {
 		case 'chooseAgreement':
-			var chooseAgreement = document.getElementById("4.1.4");
-			var agreementBlockoperation = document.getElementById("4.1.4");
-			getChildren(agreementBlockoperation.parentNode)[0].checked = true;
-			getChildren(agreementBlockoperation.parentNode)[0].setAttribute('checked', true);
-			agreementBlockoperation.style.display = 'block';
+			//var chooseAgreement = document.getElementById("4.1.4");
+			updateNextStep("4.1.4");
+			//var agreementBlockoperation = document.getElementById("4.1.4");
+			//getChildren(agreementBlockoperation.parentNode)[0].checked = true;
+			//getChildren(agreementBlockoperation.parentNode)[0].setAttribute('checked', true);
+			//agreementBlockoperation.style.display = 'block';
 			break;
 		case 'loginCSA':
-			var loginCSA = document.getElementById("4.1.3");
+			var loginCSA = updateNextStep("4.1.3");
+			//var loginCSA = document.getElementById("4.1.3");
 			loginCSA.namedItem("token").value = eribEntity.token;
 			var newoption = document.createElement('option');
 			newoption.text = 'Адрес сервера из ответа CSA';
@@ -2581,16 +2683,19 @@ function parseAnswer(result) {
 					eribAddress.set(eribEntity.host);
 				}
 			}
-			//var csaBlockoperation = document.getElementById("4.1.3");
-			getChildren(loginCSA.parentNode)[0].checked = true;
-			getChildren(loginCSA.parentNode)[0].setAttribute('checked', true);
-			loginCSA.style.display = 'block';
+			//getChildren(loginCSA.parentNode)[0].checked = true;
+			//getChildren(loginCSA.parentNode)[0].setAttribute('checked', true);
+			//loginCSA.style.display = 'block';
 			break;
 		}
 	}
+	var divButtons = document.getElementById("buttons");
+	var divSave2File = document.getElementById("buttons");
+	divButtons.appendChild(eribEntity.getButtons());
+	divButtons.style.zIndex = 1;
+	divSave2File.appendChild(eribEntity.getButtons(true));
+	divSave2File.style.zIndex = 1;
 
-	document.getElementById("buttons").innerHTML = eribEntity.getButtons();
-	document.getElementById("save2File").innerHTML = eribEntity.getButtons(true);
 	SyntaxHighlighter.highlight();
 	document.getElementById('currentServer').innerHTML = '<b>CSA:</b> <i>' + eribServerInfo.csaAddrr + '</i> &nbsp; &nbsp; &nbsp; <b>Node:</b>' + eribServerInfo.eribAddr
 }

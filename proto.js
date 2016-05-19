@@ -1,7 +1,6 @@
 // ------------------------------     Prototypes     ------------------------------
-
-try {
-	// check for XMLDocument implementation
+try {// XMLDocument prototypes
+	
 	if (XMLDocument) {
 		if (!XMLDocument.prototype.loadXML) {
 			XMLDocument.prototype.loadXML = function (xmlString) {
@@ -50,7 +49,7 @@ try {
 	}
 } catch (e) {}
 
-try {
+try {// Array prototypes
 	if (!Array.prototype.indexOf) {
 		Array.prototype.indexOf = function (searchElement, fromIndex) {
 			if (this === undefined || this === null)
@@ -84,7 +83,7 @@ try {
 	}
 } catch (e) {}
 
-try {
+try {// String prototypes
 	if (!String.prototype.contains) {
 		String.prototype.contains = function (searchString) {
 			if (this === undefined || this === null)
@@ -148,7 +147,7 @@ try {
 	}
 } catch (e) {}
 
-try {
+try {// Event prototypes
 	if (!Event.prototype.preventDefault) {
 		Event.prototype.preventDefault = function () {
 			this.returnValue = false;
@@ -161,7 +160,7 @@ try {
 	}
 } catch (e) {}
 
-try {
+try {// Element prototypes
 	function getElements(arrayOfElements, tag, firstOccurence) {
 		var result = [];
 		var arrLength = arrayOfElements.length;
@@ -721,10 +720,20 @@ function getXmlValue(srcXML, tagName, isBoolean) {
 	try {
 		var elementsList = srcXML.getElementsByTagName(tagName);
 		if (!isBoolean) {
+			var tempResult='';
 			if (elementsList[0].text)
-				result = elementsList[0].text;
+				tempResult = elementsList[0].text;
 			if (elementsList[0].textContent)
-				result = elementsList[0].textContent;
+				tempResult = elementsList[0].textContent;
+			//Убираем переносы строк
+			tempResult = trim(tempResult.split('\r').join(' ').split('\n').join(' '));
+			//Схлопываем двойные пробелы в один, но не больше 10 попыток.
+			var hanged=0;
+			while(tempResult.split('  ').length>1 && hanged<10) {
+				hanged++;
+				tempResult = tempResult.split('  ').join(' ');
+			}
+			result = tempResult;
 		} else {
 			result = (elementsList.length > 0);
 		}

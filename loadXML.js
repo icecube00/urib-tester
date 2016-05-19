@@ -1,4 +1,4 @@
-var scriptVersion = "2.1.02";
+var scriptVersion = "2.1.03";
 var eribOperations = new dictionary();
 var alter2spec = new dictionary();
 var arrayOfrequests = [];
@@ -17,7 +17,7 @@ function loadXML() {
 	} catch (err) {
 		//console.warn('loadXML(): Error:: ' + err.description);
 		try {
-			var children = getChildren(docXML.documentElement)
+			var children = getChildren(docXML.documentElement);
 			if (docXML.documentElement.nodeName === "parsererror")
 				errorXMLParser = children[0].nodeValue;
 		} catch (e) {
@@ -87,16 +87,16 @@ function buildMenu(operation) {
 	input.type = 'checkbox';
 	input.setAttributeNode(inpName);
 	input.setAttributeNode(inpClass);
-	input.onclick = function onclick(event){
+	input.onclick = function onclick(event) {
 		toggleChildren();
 	}
 	/*
 	if (input.addEventListener) {
-		input.addEventListener("click", toggleChildren, false);
+	input.addEventListener("click", toggleChildren, false);
 	} else {
-		input.attachEvent("onclick", toggleChildren);
+	input.attachEvent("onclick", toggleChildren);
 	}
-	*/
+	 */
 	var inpClick = document.createAttribute('onclick');
 	inpClick.value = 'toggleChildren("' + op_id + '");';
 	div.setAttributeNode(inpClick);
@@ -112,15 +112,15 @@ function buildMenu(operation) {
 	for (var child = 0; child < childrenLength; child++) {
 		var inner = innerChildren[child];
 		if (inner.nodeName === 'operation') {
-				var innerDiv = buildMenu(inner);
-				innerDiv.style.display = 'none';
-				div.appendChild(innerDiv);
-			}
-			if (inner.nodeName === 'request') {
-				var innerRequest = buildRequest(inner);
-				innerRequest.style.display = 'none';
-				div.appendChild(innerRequest);
-			}
+			var innerDiv = buildMenu(inner);
+			innerDiv.style.display = 'none';
+			div.appendChild(innerDiv);
+		}
+		if (inner.nodeName === 'request') {
+			var innerRequest = buildRequest(inner);
+			innerRequest.style.display = 'none';
+			div.appendChild(innerRequest);
+		}
 	}
 
 	return div;
@@ -495,12 +495,12 @@ function divChoice() {
 				var currentOption = divOptions[n];
 				/*
 				currentOption.addEventListener('mouseover', function (event) {
-					addClass(currentOption, "choose1");
+				addClass(currentOption, "choose1");
 				}, false);
 				currentOption.addEventListener('mouseleave', function (event) {
-					delClass(currentOption, "choose1");
+				delClass(currentOption, "choose1");
 				}, true);
-				*/
+				 */
 				currentOption.onmouseover = function onmouseover(event) {
 					addClass(currentOption, "choose1");
 				}
