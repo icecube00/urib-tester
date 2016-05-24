@@ -1,14 +1,15 @@
 // ------------------------------     Prototypes     ------------------------------
-try {// XMLDocument prototypes
-	
+try { // XMLDocument prototypes
 	if (XMLDocument) {
 		if (!XMLDocument.prototype.loadXML) {
 			XMLDocument.prototype.loadXML = function (xmlString) {
-				if (this === undefined || this === null)
+				if (this === undefined || this === null) {
 					throw new TypeError('"XMLDocument.prototype.loadXML" is NULL or not defined');
+				}
 				var childNodes = getChildren(this);
-				for (var i = childNodes.length - 1; i >= 0; i--)
+				for (var i = (childNodes.length - 1); i >= 0; i--) {
 					this.removeChild(childNodes[i]);
+				}
 				var dp = new DOMParser();
 				var newDOM = dp.parseFromString(xmlString, "text/xml");
 				var newElt = this.importNode(newDOM.documentElement, true);
@@ -24,15 +25,15 @@ try {// XMLDocument prototypes
 			if (!xNode) {
 				xNode = this;
 			}
-			var oNSResolver = this.createNSResolver(this.documentElement)
-				var aItems = this.evaluate(cXPathString, xNode, oNSResolver,
-					XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)
-				var aResult = [];
+			var oNSResolver = this.createNSResolver(this.documentElement);
+			var aItems = this.evaluate(cXPathString, xNode, oNSResolver,
+					XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+			var aResult = [];
 			for (var i = 0; i < aItems.snapshotLength; i++) {
 				aResult[i] = aItems.snapshotItem(i);
 			}
 			return aResult;
-		}
+		};
 
 		// prototying the XMLDocument selectSingleNode
 		XMLDocument.prototype.selectSingleNode = function (cXPathString, xNode) {
@@ -45,11 +46,11 @@ try {// XMLDocument prototypes
 			} else {
 				return null;
 			}
-		}
+		};
 	}
 } catch (e) {}
 
-try {// Array prototypes
+try { // Array prototypes
 	if (!Array.prototype.indexOf) {
 		Array.prototype.indexOf = function (searchElement, fromIndex) {
 			if (this === undefined || this === null)
@@ -71,7 +72,7 @@ try {// Array prototypes
 			}
 			return -1;
 		};
-	};
+	}
 	if (!Array.prototype.isEmpty) {
 		Array.prototype.isEmpty = function () {
 			if (this === undefined || this === null)
@@ -83,7 +84,7 @@ try {// Array prototypes
 	}
 } catch (e) {}
 
-try {// String prototypes
+try { // String prototypes
 	if (!String.prototype.contains) {
 		String.prototype.contains = function (searchString) {
 			if (this === undefined || this === null)
@@ -105,22 +106,22 @@ try {// String prototypes
 	if (!String.prototype.repeat) {
 		String.prototype.repeat = function (count) {
 			'use strict';
-			if (this == null) {
+			if (this === null) {
 				throw new TypeError('can\'t convert ' + this + ' to object');
 			}
 			var str = '' + this;
 			count = +count;
-			if (count != count) {
+			if (count !== count) {
 				count = 0;
 			}
 			if (count < 0) {
 				throw new RangeError('repeat count must be non-negative');
 			}
-			if (count == Infinity) {
+			if (count === Infinity) {
 				throw new RangeError('repeat count must be less than infinity');
 			}
 			count = Math.floor(count);
-			if (str.length == 0 || count == 0) {
+			if (str.length === 0 || count === 0) {
 				return '';
 			}
 			// Ensuring count is a 31-bit integer allows us to heavily optimize the
@@ -135,7 +136,7 @@ try {// String prototypes
 					rpt += str;
 				}
 				count >>>= 1;
-				if (count == 0) {
+				if (count === 0) {
 					break;
 				}
 				str += str;
@@ -143,24 +144,26 @@ try {// String prototypes
 			// Could we try:
 			// return Array(count + 1).join(this);
 			return rpt;
-		}
+		};
 	}
 } catch (e) {}
 
-try {// Event prototypes
+try { // Event prototypes
 	if (!Event.prototype.preventDefault) {
-		Event.prototype.preventDefault = function () {
+		var preventDefault = function () {
 			this.returnValue = false;
 		};
+		Event.prototype.preventDefault = preventDefault;
 	}
 	if (!Event.prototype.stopPropagation) {
-		Event.prototype.stopPropagation = function () {
+		var stopPropagation = function () {
 			this.cancelBubble = true;
 		};
+		Event.prototype.stopPropagation = stopPropagation;
 	}
 } catch (e) {}
 
-try {// Element prototypes
+try { // Element prototypes
 	function getElements(arrayOfElements, tag, firstOccurence) {
 		var result = [];
 		var arrLength = arrayOfElements.length;
@@ -252,7 +255,7 @@ try {// Element prototypes
 		}
 	}
 	if (!Element.prototype.getAttribute) {
-		Element.prototype.getAttribute = function (attrName) {
+		var getAttribute = function (attrName) {
 			if (this === undefined || this === null)
 				throw new TypeError('"Element.prototype.getAttribute" is NULL or not defined');
 			var attributes = this.attributes;
@@ -260,19 +263,22 @@ try {// Element prototypes
 			var result = attributes.getNamedItem(attrName);
 			return result;
 		};
+		Element.prototype.getAttribute = getAttribute;
 	}
 	if (!Element.prototype.namedItem) {
-		Element.prototype.namedItem = function (itemName) {
+		var namedItem = function (itemName) {
 			if (this === undefined || this === null)
 				throw new TypeError('"Element.prototype.namedItem" is NULL or not defined');
 			var children = getChildren(this);
 			var childrenCount = children.length;
-			var result='';
-			for (var i=0;i<childrenCount;i++){
-				if (children[i].name === itemName) result=children[i];
+			var result = '';
+			for (var i = 0; i < childrenCount; i++) {
+				if (children[i].name === itemName)
+					result = children[i];
 			}
 			return result;
 		};
+		Element.prototype.namedItem = namedItem;
 	}
 	if (!Element.prototype.selectNodes) {
 		// prototying the Element selectNodes
@@ -297,11 +303,17 @@ try {// Element prototypes
 				case '.':
 					var curTaglength = curTag.length;
 					for (var x = 0; x < curTaglength; x++) {
-						if (curTag[x].parentNode === this) {
+						var tagParentNode = curTag[x];
+						for (var z=0;z<tags.length-1;z++){
+							tagParentNode = tagParentNode.parentNode;
+						}
+						if (tagParentNode === this) {
 							result.push(curTag[x]);
 						}
-					};
+					}
 					break;
+				default:
+					return result;
 				}
 				return result;
 				//throw new TypeError('For XML Elements Only');
@@ -333,11 +345,17 @@ try {// Element prototypes
 				case '.':
 					var curTaglength = curTag.length;
 					for (var x = 0; x < curTaglength; x++) {
-						if (curTag[x].parentNode === this) {
+						var tagParentNode = curTag[x];
+						for (var z=0;z<tags.length-1;z++){
+							tagParentNode = tagParentNode.parentNode;
+						}
+						if (tagParentNode === this) {
 							result.push(curTag[x]);
 						}
-					};
+					}
 					break;
+				default:
+					return result;
 				}
 				return result;
 
@@ -364,7 +382,6 @@ function getXMLObject(probablyXML, isText) {
 			return result;
 		} else {
 			try {
-				var result;
 				var tryAgain = true;
 
 				if (probablyXML.responseXML && probablyXML.responseXML.documentElement) {
@@ -402,6 +419,12 @@ function getXMLObject(probablyXML, isText) {
 		}
 	} catch (e) {
 		//console.warn('getXMLObject: ' + e.description);
+		return {
+			parseError : {
+				errorCode : 1,
+				reason : e.message
+			}
+		};
 	}
 }
 
@@ -517,12 +540,12 @@ function getParam(paramMap, paramName, isMulty) {
 	var append = false;
 	try {
 		for (var i = 0; i < paramMap.length; i++) {
-			name = paramMap[i].split('=')[0]
-				value = paramMap[i].split('=')[1]
-				if (name === paramName) {
-					append ? result += "." + value : result += value;
-					append = true;
-				}
+			name = paramMap[i].split('=')[0];
+			value = paramMap[i].split('=')[1];
+			if (name === paramName) {
+				append ? result += "." + value : result += value;
+				append = true;
+			}
 		}
 	}
 	finally {
@@ -593,7 +616,7 @@ function xmlFormatter(xml) {
 		}
 	}
 	return formattedXML;
-};
+}
 
 function Timer(ms) {
 	//console.log('Timer(ms:' + ms + ')');
@@ -720,20 +743,19 @@ function getXmlValue(srcXML, tagName, isBoolean) {
 	try {
 		var elementsList = srcXML.getElementsByTagName(tagName);
 		if (!isBoolean) {
-			var tempResult='';
-			if (elementsList[0].text)
-				tempResult = elementsList[0].text;
-			if (elementsList[0].textContent)
-				tempResult = elementsList[0].textContent;
-			//Убираем переносы строк
-			tempResult = trim(tempResult.split('\r').join(' ').split('\n').join(' '));
-			//Схлопываем двойные пробелы в один, но не больше 10 попыток.
-			var hanged=0;
-			while(tempResult.split('  ').length>1 && hanged<10) {
-				hanged++;
-				tempResult = tempResult.split('  ').join(' ');
+			if (elementsList.length > 0) {
+				var tempResult = '';
+				tempResult = elementsList[0].text||elementsList[0].textContent;
+				//Убираем переносы строк
+				tempResult = trim(tempResult.split('\r').join(' ').split('\n').join(' '));
+				//Схлопываем двойные пробелы в один, но не больше 10 попыток.
+				var hanged = 0;
+				while (tempResult.split('  ').length > 1 && hanged < 10) {
+					hanged++;
+					tempResult = tempResult.split('  ').join(' ');
+				}
+				result = tempResult;
 			}
-			result = tempResult;
 		} else {
 			result = (elementsList.length > 0);
 		}
@@ -756,18 +778,19 @@ function dictionary() {
 			result += this.key[i] + ': ' + this.value[i] + '\r\n';
 		}
 		return result;
-	}
+	};
 
 	this.add = function (strKey, strValue, force) {
 		var keysLength = this.key.length;
 		for (var i = 0; i < keysLength; i++) {
-			if (this.key[i] === strKey)
+			if (this.key[i] === strKey) {
 				if (force) {
 					this.value[i] = strValue;
 					return true;
 				} else {
 					return false;
 				}
+			}
 		}
 		this.key.push(strKey);
 		this.value.push(strValue);

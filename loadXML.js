@@ -1,4 +1,4 @@
-var scriptVersion = "2.1.03";
+var scriptVersion = "2.1.04";
 var eribOperations = new dictionary();
 var alter2spec = new dictionary();
 var arrayOfrequests = [];
@@ -6,10 +6,20 @@ var arrayOfrequests = [];
 function loadXML() {
 	//console.log('loadXML()');
 	var newhttp = getXMLHttp();
-	newhttp.open('GET', 'erib_Protocol.xml', false);
-	newhttp.send();
-	result = newhttp;
-	var docXML = getXMLObject(result);
+	var docXML;
+	try{
+		newhttp.open('GET', 'erib_Protocol.xml', false);
+		newhttp.send();
+		result = newhttp;
+		docXML = getXMLObject(result);
+	}
+	catch(error){
+		result = new ActiveXObject("Microsoft.XMLDOM");
+		result.async = false;
+		result.load('erib_Protocol.xml');
+		docXML = result;
+	}
+	
 	var errorXMLParser = "";
 	try {
 		if (docXML.parseError.errorCode !== 0)
@@ -89,14 +99,7 @@ function buildMenu(operation) {
 	input.setAttributeNode(inpClass);
 	input.onclick = function onclick(event) {
 		toggleChildren();
-	}
-	/*
-	if (input.addEventListener) {
-	input.addEventListener("click", toggleChildren, false);
-	} else {
-	input.attachEvent("onclick", toggleChildren);
-	}
-	 */
+	};
 	var inpClick = document.createAttribute('onclick');
 	inpClick.value = 'toggleChildren("' + op_id + '");';
 	div.setAttributeNode(inpClick);
@@ -175,8 +178,8 @@ function buildRequest(request) {
 	submit.type = 'button';
 
 	var submitClick = document.createAttribute('onclick');
-	submitClick.value = 'trySubmit("' + req_id + '");'
-		submit.setAttributeNode(submitClick);
+	submitClick.value = 'trySubmit("' + req_id + '");';
+	submit.setAttributeNode(submitClick);
 
 	var submitValue = document.createAttribute('value');
 	submitValue.value = 'Выполнить запрос';
@@ -201,7 +204,7 @@ function buildRequest(request) {
 	form.setAttributeNode(attName);
 	form.setAttributeNode(attId);
 	form.setAttributeNode(attAction);
-	form.setAttributeNode(formClass)
+	form.setAttributeNode(formClass);
 	form.method = action.getAttribute('method');
 	form.appendChild(submit);
 
@@ -260,14 +263,16 @@ function createInput(param, type, req_id) {
 
 	var spanTxt = document.createElement('span');
 	spanTxt.appendChild(inpText);
+	var inpName,
+	txtClass;
 	if (req_id) {
-		var inpName = document.createAttribute('name');
-		var txtClass = document.createAttribute('class');
+		inpName = document.createAttribute('name');
+		txtClass = document.createAttribute('class');
 		txtClass.value = 'description postdata';
 		spanTxt.setAttributeNode(txtClass);
 	} else {
-		var inpName = document.createAttribute('id');
-		var txtClass = document.createAttribute('class');
+		inpName = document.createAttribute('id');
+		txtClass = document.createAttribute('class');
 		txtClass.value = 'settingsElement';
 		classValue = 'settingsElement';
 		inpClass.value = classValue;
@@ -299,19 +304,17 @@ function createInput(param, type, req_id) {
 function createList(param, req_id) {
 	var required = (param.getAttribute('required') === 'true');
 	var newSelect = document.createElement('select');
+	var selectName;
 	if (req_id) {
-		var selectName = document.createAttribute('name');
+		selectName = document.createAttribute('name');
 	} else {
-		var selectName = document.createAttribute('id');
+		selectName = document.createAttribute('id');
 		var selectClass = document.createAttribute('class');
 		selectClass.value = 'settingsElement';
 		newSelect.setAttributeNode(selectClass);
 	}
 	selectName.value = param.getAttribute('name');
 	newSelect.setAttributeNode(selectName);
-	newSelect.onselect = function onselect(event) {
-		//console.log(selectName.value + 'onselect');
-	}
 	var options = param.selectNodes('./list/option');
 	var optionsLength = options.length;
 	for (var opt = 0; opt < optionsLength; opt++) {
@@ -430,17 +433,16 @@ function toggleChildren(divId, isForm) {
 	//console.log('toggleChildren(' + divId + ', isForm:' + isForm + ')');
 	var currentDiv = document.getElementById(divId);
 	var showIt = 'none';
-	var divChildren = [];
-
+	var divChildren = [],
+	children = [];
 	if (isForm) {
-		var children = getChildren(currentDiv.parentElement);
-		var input = children[0];
+		children = getChildren(currentDiv.parentElement);
 		divChildren.push(currentDiv);
 	} else {
-		var children = getChildren(currentDiv);
-		var input = children[0];
-		var divChildren = children;
+		children = getChildren(currentDiv);
+		divChildren = children;
 	}
+	var input = children[0];
 	if (input.checked) {
 		showIt = 'block';
 	}
@@ -503,10 +505,10 @@ function divChoice() {
 				 */
 				currentOption.onmouseover = function onmouseover(event) {
 					addClass(currentOption, "choose1");
-				}
+				};
 				currentOption.onmouseleave = function onmouseleave(event) {
 					delClass(currentOption, "choose1");
-				}
+				};
 			})(n);
 			var checkedOptions = getElementsByClassName(divOptions[n], "ignore");
 			for (var x = 0; x < checkedOptions.length; x++) {
@@ -515,6 +517,7 @@ function divChoice() {
 						var checkedParent = this.parentNode.parentNode.parentNode;
 						var checkedChildren = getElementsByClassName(this.parentNode, "option");
 						var localSiblings = getAllSiblings(this);
+						var node;
 						if (this.checked) {
 							if (checkedParent.tagName === "DIV" && checkedParent.className.contains("option")) {
 								addClass(checkedParent, "choose3");
@@ -526,10 +529,11 @@ function divChoice() {
 							}
 							addClass(this.parentNode, "choose3");
 							var siblings = getAllSiblings(this.parentNode);
+							var checkBoxes = [];
 							for (var xt = 0; xt < siblings.length; xt++) {
-								var node = siblings[xt];
+								node = siblings[xt];
 								delClass(node, "choose3");
-								var checkBoxes = getElementsByClassName(node, "ignore");
+								checkBoxes = getElementsByClassName(node, "ignore");
 								for (var zn = 0; zn < checkBoxes.length; zn++) {
 									if (checkBoxes[zn].checked) {
 										checkBoxes[zn].checked = "";
@@ -538,7 +542,7 @@ function divChoice() {
 								}
 							}
 							for (var zt = 0; zt < localSiblings.length; zt++) {
-								var node = localSiblings[zt];
+								node = localSiblings[zt];
 								if (node.type === 'checkbox' && !node.checked) {
 									node.checked = "checked";
 									node.onclick();
@@ -546,7 +550,7 @@ function divChoice() {
 							}
 						} else {
 							for (var i = 0; i < checkedChildren.length; i++) {
-								var checkBoxes = getElementsByClassName(checkedChildren[i], "ignore");
+								checkBoxes = getElementsByClassName(checkedChildren[i], "ignore");
 								for (var n = 0; n < checkBoxes.length; n++) {
 									if (checkBoxes[n].checked) {
 										checkBoxes[n].checked = "";
@@ -557,14 +561,14 @@ function divChoice() {
 							}
 							delClass(this.parentNode, "choose3");
 							for (var ct = 0; ct < localSiblings.length; ct++) {
-								var node = localSiblings[ct];
+								node = localSiblings[ct];
 								if (node.type === 'checkbox' && node.checked) {
 									node.checked = "";
 									node.onclick();
 								}
 							}
 						}
-					}
+					};
 				})(x);
 			}
 		}
