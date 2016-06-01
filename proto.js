@@ -304,7 +304,7 @@ try { // Element prototypes
 					var curTaglength = curTag.length;
 					for (var x = 0; x < curTaglength; x++) {
 						var tagParentNode = curTag[x];
-						for (var z=0;z<tags.length-1;z++){
+						for (var z = 0; z < tags.length - 1; z++) {
 							tagParentNode = tagParentNode.parentNode;
 						}
 						if (tagParentNode === this) {
@@ -346,7 +346,7 @@ try { // Element prototypes
 					var curTaglength = curTag.length;
 					for (var x = 0; x < curTaglength; x++) {
 						var tagParentNode = curTag[x];
-						for (var z=0;z<tags.length-1;z++){
+						for (var z = 0; z < tags.length - 1; z++) {
 							tagParentNode = tagParentNode.parentNode;
 						}
 						if (tagParentNode === this) {
@@ -363,6 +363,16 @@ try { // Element prototypes
 		};
 		Element.prototype.selectSingleNode = selectSingleNode;
 	}
+	if (!Element.prototype.setNewAttribute) {
+		var setNewAttribute = function (attType, attValue) {
+			if (this === undefined || this === null)
+				throw new TypeError('"Element.prototype.setNewAttribute" is NULL or not defined');
+			var newAttribute = window.document.createAttribute(attType);
+			newAttribute.value = attValue;
+			this.setAttributeNode(newAttribute);
+		};
+		Element.prototype.setNewAttribute = setNewAttribute;
+	}
 } catch (e) {}
 
 // ------------------------------     UTILS     ------------------------------
@@ -372,10 +382,16 @@ function getXMLObject(probablyXML, isText) {
 	try {
 		if (isText) {
 			try {
-				result = new XMLDocument();
-				result.load(probablyXML);
+				if (window.DOMParser) { // all browsers, except IE before version 9
+					var parser = new DOMParser();
+					try {
+						result = parser.parseFromString(probablyXML, "text/xml");
+					} catch (parseErr) {
+						//console.error('Error parsing from string. ' + parseErr.message);
+					}
+				}
 			} catch (e) {
-				result = new ActiveXObject("Microsoft.XMLDOM");
+				result = CreateMSXMLDocumentObject();
 				result.async = false;
 				result.loadXML(probablyXML);
 			}
@@ -383,7 +399,6 @@ function getXMLObject(probablyXML, isText) {
 		} else {
 			try {
 				var tryAgain = true;
-
 				if (probablyXML.responseXML && probablyXML.responseXML.documentElement) {
 					var children = getChildren(probablyXML.responseXML);
 					if (children.length > 0) {
@@ -400,16 +415,15 @@ function getXMLObject(probablyXML, isText) {
 						tryAgain = false;
 					}
 				}
-
 				if (tryAgain) {
 					result = getXMLObject(probablyXML.responseText, true);
 				}
 			} catch (err) {
-				//console.warn('getXMLObject: ' + err.description);
+				//console.warn('getXMLObject: ' + err.message);
 				result = {
 					parseError : {
 						errorCode : 1,
-						reason : err.description
+						reason : err.message
 					}
 				};
 			}
@@ -418,7 +432,7 @@ function getXMLObject(probablyXML, isText) {
 			}
 		}
 	} catch (e) {
-		//console.warn('getXMLObject: ' + e.description);
+		//console.warn('getXMLObject: ' + e.message);
 		return {
 			parseError : {
 				errorCode : 1,
@@ -438,11 +452,11 @@ function getXMLHttp(existingConn) {
 		try {
 			xmlHttp = new ActiveXObject("MSXML2.ServerXMLHTTP.3.0");
 		} catch (e) {
-			//console.error('getXMLHttp: ' + e.description);
+			//console.error('getXMLHttp: ' + e.message);
 			try {
 				xmlHttp = new ActiveXObject("Microsoft.XMLHTTP");
 			} catch (E) {
-				//console.error('getXMLHttp: ' + E.description);
+				//console.error('getXMLHttp: ' + E.message);
 				xmlHttp = null;
 			}
 		}
@@ -451,7 +465,7 @@ function getXMLHttp(existingConn) {
 		//А вдруг получится.
 		xmlHttp.setOption(2, 13056);
 	} catch (e) {
-		//console.warn('getXMLHttp: ' + e.description);
+		//console.warn('getXMLHttp: ' + e.message);
 		//Ну, значит не получилось.
 	}
 	//console.log('getXMLHttp: xmlHttp');
@@ -501,7 +515,7 @@ function isCheckedBox(checkBoxId) {
 	try {
 		result = document.getElementById(checkBoxId).checked;
 	} catch (e) {
-		//console.error('isCheckedBox(): ' + e.description);
+		//console.error('isCheckedBox(): ' + e.message);
 		//Ой, что-то не получилось
 	}
 	//console.log('isCheckedBox(' + checkBoxId + '): ' + result);
@@ -528,7 +542,7 @@ function isNumeric(sValue) {
 		var z = parseFloat(sValue);
 		result = (z * 0 === 0);
 	} catch (e) {
-		//console.error('isNumeric(): ' + e.description);
+		//console.error('isNumeric(): ' + e.message);
 	}
 	//console.log('isNumeric(' + sValue + '): ' + result);
 	return result;
@@ -745,7 +759,7 @@ function getXmlValue(srcXML, tagName, isBoolean) {
 		if (!isBoolean) {
 			if (elementsList.length > 0) {
 				var tempResult = '';
-				tempResult = elementsList[0].text||elementsList[0].textContent;
+				tempResult = elementsList[0].text || elementsList[0].textContent;
 				//Убираем переносы строк
 				tempResult = trim(tempResult.split('\r').join(' ').split('\n').join(' '));
 				//Схлопываем двойные пробелы в один, но не больше 10 попыток.
@@ -760,7 +774,7 @@ function getXmlValue(srcXML, tagName, isBoolean) {
 			result = (elementsList.length > 0);
 		}
 	} catch (e) {
-		//console.warn('getXmlValue(): ' + e.description);
+		//console.warn('getXmlValue(): ' + e.message);
 		//do nothing
 	}
 	//console.log('getXmlValue: ' + result);
@@ -841,4 +855,23 @@ function getChildren(nodeElement) {
 			result.push(childNodes[node]);
 	}
 	return result;
+}
+
+function CreateMSXMLDocumentObject() {
+	if (typeof(ActiveXObject) !== undefined) {
+		var progIDs = [
+			"Msxml2.DOMDocument.6.0",
+			"Msxml2.DOMDocument.5.0",
+			"Msxml2.DOMDocument.4.0",
+			"Msxml2.DOMDocument.3.0",
+			"MSXML2.DOMDocument",
+			"MSXML.DOMDocument"
+		];
+		for (var i = 0; i < progIDs.length; i++) {
+			try {
+				return new ActiveXObject(progIDs[i]);
+			} catch (e) {};
+		}
+	}
+	return;
 }

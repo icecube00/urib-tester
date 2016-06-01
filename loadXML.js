@@ -1,4 +1,4 @@
-var scriptVersion = "2.1.04";
+var scriptVersion = "2.1.05";
 var eribOperations = new dictionary();
 var alter2spec = new dictionary();
 var arrayOfrequests = [];
@@ -7,57 +7,51 @@ function loadXML() {
 	//console.log('loadXML()');
 	var newhttp = getXMLHttp();
 	var docXML;
-	try{
+	try {
 		newhttp.open('GET', 'erib_Protocol.xml', false);
 		newhttp.send();
-		result = newhttp;
-		docXML = getXMLObject(result);
+		docXML = getXMLObject(newhttp);
+	} catch (error) {
+		docXML = CreateMSXMLDocumentObject();
+		docXML.async = false;
+		docXML.load('erib_Protocol.xml');
 	}
-	catch(error){
-		result = new ActiveXObject("Microsoft.XMLDOM");
-		result.async = false;
-		result.load('erib_Protocol.xml');
-		docXML = result;
-	}
-	
+
 	var errorXMLParser = "";
 	try {
 		if (docXML.parseError.errorCode !== 0)
 			errorXMLParser = docXML.parseError.reason;
 	} catch (err) {
-		//console.warn('loadXML(): Error:: ' + err.description);
+		//console.warn('loadXML(): Error:: ' + err.message);
 		try {
 			var children = getChildren(docXML.documentElement);
 			if (docXML.documentElement.nodeName === "parsererror")
 				errorXMLParser = children[0].nodeValue;
 		} catch (e) {
-			//console.warn('loadXML(): Error:: ' + e.description);
-			errorXMLParser = "Fatal error. Could not parse XML.";
+			//console.warn('loadXML(): Error:: ' + e.message);
+			errorXMLParser = 'Fatal error. Could not parse XML.\r\nERROR: ' + e.message;
 		}
 	}
 	if (errorXMLParser.isEmpty()) {
 		//
-		var newSettings = '';
+		var globalSettings = document.getElementById('settings');
 		var settings = docXML.documentElement.selectNodes('./settings');
 		var settingsLength = settings.length;
 		for (var current = 0; current < settingsLength; current++) {
 			var currentSetting = settings[current];
 			var divSetting = buildSettings(currentSetting);
-			newSettings += divSetting.outerHTML;
+			globalSettings.appendChild(divSetting);
 		}
-		var globalSettings = document.getElementById('settings');
-		globalSettings.innerHTML = newSettings;
-		//
 		var operations = docXML.documentElement.selectNodes('./operation');
 		var operationsLength = operations.length;
-		var newMenu = '';
+
+		var globalDiv = document.getElementById('operations');
 		for (var currentOp = 0; currentOp < operationsLength; currentOp++) {
 			var currentOperation = operations[currentOp];
 			var divMenu = buildMenu(currentOperation);
-			newMenu += divMenu.outerHTML;
+			globalDiv.appendChild(divMenu);
 		}
-		var globalDiv = document.getElementById('operations');
-		globalDiv.innerHTML = newMenu;
+
 		if (document.getElementById("useStatus").checked) {
 			getCards();
 			document.getElementById("useStatus").checked = false;
@@ -78,36 +72,22 @@ function buildMenu(operation) {
 	var op_id = operation.getAttribute('id');
 	//console.log('buildMenu(operation [' + op_id + '::' + op_name + '])');
 	var div = document.createElement('div');
-	var attName = document.createAttribute('name');
 	var txtNode = document.createTextNode(' ' + op_id + ' ' + op_name);
-	var attId = document.createAttribute('id');
 
 	var spanTxt = document.createElement('span');
 	spanTxt.appendChild(txtNode);
-	var txtClass = document.createAttribute('class');
-	txtClass.value = 'description operations';
-	spanTxt.setAttributeNode(txtClass);
+	spanTxt.setNewAttribute('class', 'description operations');
 
 	var input = document.createElement('input');
-	var inpName = document.createAttribute('name');
-	var inpClass = document.createAttribute('class');
-	inpName.value = op_id;
-	inpClass.value = 'ignore';
-
 	input.type = 'checkbox';
-	input.setAttributeNode(inpName);
-	input.setAttributeNode(inpClass);
-	input.onclick = function onclick(event) {
-		toggleChildren();
-	};
-	var inpClick = document.createAttribute('onclick');
-	inpClick.value = 'toggleChildren("' + op_id + '");';
-	div.setAttributeNode(inpClick);
+	input.setNewAttribute('name', op_id);
+	input.setNewAttribute('class', 'ignore');
 
-	attName.value = op_name;
-	attId.value = op_id;
-	div.setAttributeNode(attName);
-	div.setAttributeNode(attId);
+	var inpClick = 'toggleChildren("' + op_id + '");';
+	div.setNewAttribute('onclick', inpClick);
+	div.setNewAttribute('name', op_name);
+	div.setNewAttribute('id', op_id);
+
 	div.appendChild(input);
 	div.appendChild(spanTxt);
 	var innerChildren = getChildren(operation);
@@ -146,25 +126,16 @@ function buildRequest(request) {
 	var tParams = action.selectNodes('./params')[0];
 	var params = getChildren(tParams);
 
-	var attCharset = document.createAttribute('accept-charset');
-	var attName = document.createAttribute('name');
-	var attId = document.createAttribute('id');
-	var attAction = document.createAttribute('action');
+	form.setNewAttribute('accept-charset', 'UTF-8');
+	form.setNewAttribute('name', req_name);
+	form.setNewAttribute('id', req_id);
+	form.setNewAttribute('action', action.getAttribute('url'));
 
 	var checkBox = document.createElement('input');
-	var inpName = document.createAttribute('name');
-	var inpClass = document.createAttribute('class');
-	inpName.value = req_id;
-	inpClass.value = 'ignore';
-
 	checkBox.type = 'checkbox';
-	checkBox.setAttributeNode(inpName);
-	checkBox.setAttributeNode(inpClass);
+	checkBox.setNewAttribute('class', 'ignore');
+	checkBox.setNewAttribute('name', req_id);
 
-	attCharset.value = 'UTF-8';
-	attName.value = req_name;
-	attId.value = req_id;
-	attAction.value = action.getAttribute('url');
 	var paramsLength = params.length;
 	for (var par = 0; par < paramsLength; par++) {
 		var br = document.createElement('br');
@@ -177,34 +148,17 @@ function buildRequest(request) {
 	var submit = document.createElement('input');
 	submit.type = 'button';
 
-	var submitClick = document.createAttribute('onclick');
-	submitClick.value = 'trySubmit("' + req_id + '");';
-	submit.setAttributeNode(submitClick);
-
-	var submitValue = document.createAttribute('value');
-	submitValue.value = 'Выполнить запрос';
-	submit.setAttributeNode(submitValue);
-
-	var submitClass = document.createAttribute('class');
-	submitClass.value = 'submit';
-	submit.setAttributeNode(submitClass);
-
-	var formClass = document.createAttribute('class');
-	formClass.value = 'border description form';
+	var submitClick = 'trySubmit("' + req_id + '");';
+	submit.setNewAttribute('onclick', submitClick);
+	submit.setNewAttribute('value', 'Выполнить запрос');
+	submit.setNewAttribute('class', 'submit');
 
 	var txtNode = document.createTextNode(' ' + req_id + ' ' + req_name);
 
 	var spanTxt = document.createElement('span');
 	spanTxt.appendChild(txtNode);
-	var txtClass = document.createAttribute('class');
-	txtClass.value = 'description request ' + permissions;
-	spanTxt.setAttributeNode(txtClass);
-
-	form.setAttributeNode(attCharset);
-	form.setAttributeNode(attName);
-	form.setAttributeNode(attId);
-	form.setAttributeNode(attAction);
-	form.setAttributeNode(formClass);
+	spanTxt.setNewAttribute('class', 'description request ' + permissions);
+	form.setNewAttribute('class', 'border description form');
 	form.method = action.getAttribute('method');
 	form.appendChild(submit);
 
@@ -213,9 +167,8 @@ function buildRequest(request) {
 	form.style.display = 'none';
 	formDiv.appendChild(form);
 
-	var inpClick = document.createAttribute('onclick');
-	inpClick.value = 'toggleChildren("' + req_id + '", true);';
-	formDiv.setAttributeNode(inpClick);
+	var inpClick = 'toggleChildren("' + req_id + '", true);';
+	formDiv.setNewAttribute('onclick', inpClick);
 	eribOperations.add(req_id, action.getAttribute('name'));
 	alter2spec.add(req_id, arrayOfrequests);
 	return formDiv;
@@ -236,18 +189,10 @@ function createShow(param) {
 		name.push(value + '.next');
 	}
 	var showDiv = document.createElement('div');
-	var classshow = document.createAttribute('class');
-	var nameshow = document.createAttribute('name');
-	var idshow = document.createAttribute('id');
-
-	classshow.value = 'border showresult';
-	nameshow.value = name.join(' ');
-	idshow.value = id;
 	//console.log('createShow(param [' + id + '::' + name + '])');
-
-	showDiv.setAttributeNode(classshow);
-	showDiv.setAttributeNode(nameshow);
-	showDiv.setAttributeNode(idshow);
+	showDiv.setNewAttribute('class', 'border showresult');
+	showDiv.setNewAttribute('name', name.join(' '));
+	showDiv.setNewAttribute('id', id);
 	return showDiv;
 }
 
@@ -256,47 +201,36 @@ function createInput(param, type, req_id) {
 	var classValue = '';
 
 	var input = document.createElement('input');
-	var inpValue = document.createAttribute('value');
+	var inpValue = param.getAttribute('value');
 
 	var inpText = document.createTextNode(param.getAttribute('text'));
-	var inpClass = document.createAttribute('class');
 
 	var spanTxt = document.createElement('span');
 	spanTxt.appendChild(inpText);
-	var inpName,
-	txtClass;
+	var inpName = param.getAttribute('name');
 	if (req_id) {
-		inpName = document.createAttribute('name');
-		txtClass = document.createAttribute('class');
-		txtClass.value = 'description postdata';
-		spanTxt.setAttributeNode(txtClass);
+		spanTxt.setNewAttribute('name', inpName);
+		input.setNewAttribute('name', inpName);
+		spanTxt.setNewAttribute('class', 'description postdata');
 	} else {
-		inpName = document.createAttribute('id');
-		txtClass = document.createAttribute('class');
-		txtClass.value = 'settingsElement';
+		spanTxt.setNewAttribute('id', inpName);
+		input.setNewAttribute('id', inpName);
 		classValue = 'settingsElement';
-		inpClass.value = classValue;
-		spanTxt.setAttributeNode(txtClass);
+		spanTxt.setNewAttribute('class', 'settingsElement');
 	}
-
 	input.type = 'text';
-
-	inpValue.value = param.getAttribute('value');
-	inpName.value = param.getAttribute('name');
-
-	input.setAttributeNode(inpValue);
-	input.setAttributeNode(inpName);
+	input.setNewAttribute('value', inpValue);
+	spanTxt.setNewAttribute('id', inpName);
 
 	if (type == 'bool') {
 		input.type = 'checkbox';
-		inpClass.value = classValue + ' ignore readonly';
+		classValue += ' ignore readonly';
 	}
 
 	if (type == 'read') {
-		inpClass.value = classValue + ' readonly';
+		classValue += ' readonly';
 	}
-
-	input.setAttributeNode(inpClass);
+	input.setNewAttribute('class', classValue);
 	//console.log('createInput(param [' + param.getAttribute('name') + '::' + param.getAttribute('text') + '])');
 	return [input, spanTxt];
 }
@@ -304,17 +238,13 @@ function createInput(param, type, req_id) {
 function createList(param, req_id) {
 	var required = (param.getAttribute('required') === 'true');
 	var newSelect = document.createElement('select');
-	var selectName;
+	var selectName = param.getAttribute('name');
 	if (req_id) {
-		selectName = document.createAttribute('name');
+		newSelect.setNewAttribute('name', selectName);
 	} else {
-		selectName = document.createAttribute('id');
-		var selectClass = document.createAttribute('class');
-		selectClass.value = 'settingsElement';
-		newSelect.setAttributeNode(selectClass);
+		newSelect.setNewAttribute('id', selectName);
+		newSelect.setNewAttribute('class', 'settingsElement');
 	}
-	selectName.value = param.getAttribute('name');
-	newSelect.setAttributeNode(selectName);
 	var options = param.selectNodes('./list/option');
 	var optionsLength = options.length;
 	for (var opt = 0; opt < optionsLength; opt++) {
@@ -332,17 +262,12 @@ function createList(param, req_id) {
 function createChoice(param, req_id) {
 	var required = (param.getAttribute('required') === 'true');
 	var choiceDiv = document.createElement('div');
-	var classChoice = document.createAttribute('class');
-	classChoice.value = 'choice';
-	choiceDiv.setAttributeNode(classChoice);
-
+	choiceDiv.setNewAttribute('class', 'choice');
 	var choices = param.selectNodes('./choice');
 	var choicesLength = choices.length;
 	for (var choice = 0; choice < choicesLength; choice++) {
 		var optionDiv = document.createElement('div');
-		var classOption = document.createAttribute('class');
-		classOption.value = 'option';
-		optionDiv.setAttributeNode(classOption);
+		optionDiv.setNewAttribute('class', 'option');
 		var params = getChildren(choices[choice]);
 		var paramsLength = params.length;
 		for (var par = 0; par < paramsLength; par++) {
@@ -375,9 +300,7 @@ function fillDiv(curParam, req_id) {
 		var inpText = document.createTextNode(curParam.getAttribute('text'));
 		spanTxt.appendChild(inpText);
 		if (req_id) {
-			var txtClass = document.createAttribute('class');
-			txtClass.value = 'description postdata';
-			spanTxt.setAttributeNode(txtClass);
+			spanTxt.setNewAttribute('class', 'description postdata');
 		}
 		pushInput.push(spanTxt);
 		break;
@@ -392,30 +315,23 @@ function fillDiv(curParam, req_id) {
 		//console.log('fillDiv(curParam [' + curParam.getAttribute('text') + ', req_id [' + req_id + ']) :: OPTIONAL');
 		var optionalCheck = document.createElement('input');
 		optionalCheck.type = 'checkbox';
+		optionalCheck.setNewAttribute('class', 'ignore readonly');
 
-		var optClass = document.createAttribute('class');
-		optClass.value = 'ignore readonly';
-		optionalCheck.setAttributeNode(optClass);
-
-		var optName = document.createAttribute('name');
 		var attrName = '';
 		if (req_id) {
 			attrName = pushInput[0].getAttribute('name');
 		} else {
 			attrName = pushInput[0].getAttribute('id');
 		}
-		optName.value = attrName;
-		optionalCheck.setAttributeNode(optName);
+		optionalCheck.setNewAttribute('name', attrName);
 
-		var optValue = document.createAttribute('value');
 		var attrValue = '';
 		if (req_id) {
 			attrValue = req_id + '.' + attrName + '.value';
 		} else {
 			attrValue = 'settings.' + attrName + '.value';
 		}
-		optValue.value = attrValue;
-		optionalCheck.setAttributeNode(optValue);
+		optionalCheck.setNewAttribute('value', attrValue);
 
 		pushInput[0].setAttribute('id', attrValue);
 		var optionalclass = pushInput[0].getAttribute('class');
@@ -458,10 +374,7 @@ function toggleChildren(divId, isForm) {
 
 function buildSettings(setting) {
 	var div = document.createElement('div');
-
-	var divClass = document.createAttribute('class');
-	divClass.value = 'settings';
-	div.setAttributeNode(divClass);
+	div.setNewAttribute('class', 'settings');
 
 	var paramBlocks = setting.selectNodes('./params');
 	var blocksLength = paramBlocks.length;

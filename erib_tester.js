@@ -5,22 +5,7 @@ var warnText = '', errorText = '', emulatorExt = "";
 var tempXML = '', tempREQ = '', tempFileName = '', text2save = '', reqParams = '';
 var g_form_id = '';
 var requestName = '';
-
-var eribAddress = {
-	get : function () {
-		return "---";
-	},
-	set : function () {
-		return;
-	},
-	options : function () {
-		return [];
-	},
-	add : function () {
-		return;
-	}
-};
-
+var eribAddress;
 var eribServerInfo = {
 	region : new productListObj(),
 	csaAddrr : "",
@@ -28,59 +13,12 @@ var eribServerInfo = {
 	changed : Timer() + "::declare(INIT)"
 };
 
-var eribClientInfo = {
-	logedIn: false,
-	permissionsChecked:false,
-	name : "",
-	surName : "",
-	patrName : "",
-	product : {
-		id : -1
-	},
-	clientType : "",
-	clientRegion : {
-		id : -1,
-		name : "",
-		guid : "",
-		children : new productListObj()
-	},
-	atmRegion : {
-		id : -1,
-		name : "",
-		guid : "",
-		children : []
-	},
-	checkedUDBO : false,
-	agreementList : new productListObj(),
-	productsList : new productListObj(),
-	regularPaymentsList : new productListObj(),
-	permissionList : new dictionary(),
-	templatesList : new productListObj(),
-	loanOffersList : new productListObj(),
-	toString : function () {
-		return '';
-	}
-};
+var emptyXML = getXMLObject('<response></response>', true);
+var eribClientInfo = new eribPerson();
+var eribEntity = new erib_structure(emptyXML);
 
 var psiURL = '', pathEmulator = '';
 var timePassed = 0, timeStarted = 0, updateInterval;
-
-var eribEntity = {
-	host : '',
-	isDocument : false,
-	isConfirm : false,
-	isLogin : false,
-	checkAvailable : false,
-	templateAvailable : false,
-	autopayable : false,
-	showResult : true,
-	show : function () {
-		return '';
-	},
-	getButtons : function () {
-		return '';
-	}
-};
 
 var permissionsL2 = ["needUDBO", "ATMStorage", "AccountAbstract", "AccountBankDetails", "AccountClosingPayment", "AccountInfo", "AccountOpeningClaim",
 	"AutoPaymentInfo", "AutoSubscriptionInfo", "BanksDictionary", "CardAbstract", "CardInfo", "CloseAutoSubscriptionPayment",
@@ -93,16 +31,6 @@ var permissionsL2 = ["needUDBO", "ATMStorage", "AccountAbstract", "AccountBankDe
 	"PFRStatementClaim", "Payments", "Permissions", "Products", "Rates", "RecoverMoneyBoxPayment", "RecoveryAutoSubscriptionPayment",
 	"RecoveryP2PAutoTransferClaim", "RefuseAutoPaymentPayment", "RefuseLongOffer", "RefuseMoneyBoxPayment", "RegionsDictionary",
 	"Registration", "RegularPayments", "RemoveTemplate", "RurPayJurSB", "RurPayment", "Templates"];
-
-function clearEribSeverInfo() {
-	//console.log('clearEribSeverInfo()');
-	var currentAddress = event.srcElement.value;
-	if (eribServerInfo.csaAddrr !== currentAddress) {
-		eribServerInfo.csaAddrr = "";
-		eribServerInfo.changed = Timer() + "::clearEribSeverInfo(INIT) :: csaAddrr";
-		//console.log('eribServerInfo: ' + eribServerInfo.changed);
-	}
-}
 
 function getCards() {
 	//console.log('getCards()');
@@ -121,15 +49,20 @@ function getCards() {
 		HttpRequest("http://10.80.238.26:8118/erib-status/api/cards", params.join("&"), "urlencoded", "POST", false, true, true);
 	} catch (e) {
 		warnText += "Сервер проверки статуса ЕРИБ не доступен.\r\n";
-		//console.warn('getCards: Сервер проверки статуса ЕРИБ не доступен' + e.description);
+		//console.warn('getCards: Сервер проверки статуса ЕРИБ не доступен' + e.message);
 	}
 }
 
 function Version(eribSpec) {
-	//console.log('Version('+eribSpec+')');
+	//console.log('Version(' + eribSpec + ')');
 	eribAddress = new eribAddressConf();
-	eribServerInfo.csaAddrr = eribAddress.get();
-	document.getElementById('currentServer').innerHTML = 'Default: [' + eribServerInfo.csaAddrr + ']';
+	var currentSvr = eribAddress.get();
+	if (eribServerInfo.csaAddrr.isEmpty()) {
+		eribServerInfo.csaAddrr = currentSvr;
+	} else {
+		eribServerInfo.eribAddr = currentSvr;
+	}
+	document.getElementById('currentServer').innerHTML = 'Default: [' + currentSvr + ']';
 	try {
 		if (!eribSpec.isEmpty()) {
 			var htmlVersion = document.getElementById('version').title + eribSpec;
@@ -138,6 +71,39 @@ function Version(eribSpec) {
 		}
 	} catch (e) {
 		//eribSpec is an object, not a string
+	}
+}
+
+function toggleView(what2Do) {
+	var icon = document.getElementById('configIcon');
+	var innerTr = document.getElementById('settings');
+	var erib_debug = document.getElementById('erib_debug');
+	if (!what2Do && innerTr)
+		what2Do = innerTr.style.display;
+	switch (what2Do) {
+	case "none":
+		if (innerTr)
+			innerTr.style.display = 'block';
+		icon.src = "btn_settings_hot.png";
+		break;
+	case "block":
+		if (isCheckedBox("useStatus")) {
+			document.getElementById("useStatus").checked = false;
+			getCards();
+		}
+		if (erib_debug)
+			erib_debug.style.display = 'none';
+		if (innerTr)
+			innerTr.style.display = 'none';
+		icon.src = "btn_settings_pressed.png";
+		break;
+	default:
+		if (erib_debug)
+			erib_debug.style.display = 'none';
+		if (innerTr)
+			innerTr.style.display = 'none';
+		icon.src = "btn_settings_pressed.png";
+		break;
 	}
 }
 
@@ -160,7 +126,7 @@ function eribAddressConf() {
 			if (choosenAddrChildren[0].checked)
 				eribAddress = choosenAddrChildren[1].value;
 		}
-		//console.log('eribAddressConf.get(): eribAddress: ' + eribAddress );
+		//console.log('eribAddressConf.get(): eribAddress: ' + eribAddress);
 		return eribAddress;
 	};
 	this.set = function (eribAddress) {
@@ -168,6 +134,7 @@ function eribAddressConf() {
 		var choosenAddrChildren = getChildren(choiceAddr[0]);
 		if (choosenAddrChildren[0].checked)
 			choosenAddrChildren[1].value = eribAddress;
+		Version();
 	};
 	this.options = function () {
 		//console.log('eribAddressConf.options()');
@@ -181,12 +148,13 @@ function eribAddressConf() {
 		var choosenAddrChildren = getChildren(choiceAddr[1]);
 		if (choosenAddrChildren[0].checked)
 			choosenAddrChildren[1].add(newoption);
+		Version();
 	};
 
 }
 
 function init_my_page(dontUpdate, isSave2File) {
-	//console.log('init_my_page(dontUpdate:'+ dontUpdate +', isSave2File:' + isSave2File + ')');
+	//console.log('init_my_page(dontUpdate:' + dontUpdate + ', isSave2File:' + isSave2File + ')');
 	divChoice();
 	errorText = '';
 	showAlerts = isCheckedBox('showAlerts');
@@ -220,6 +188,7 @@ function updateStatus() {
 	erib_status.style.backgroundColor = 'rgb(255,' + greenColor + ',' + greenColor + ')';
 	erib_status.style.color = '#000000';
 	timePassed = Timer() - timeStarted;
+	var statusSpan = document.createElement('span');
 	//console.log('updateStatus: timePassed:' + timePassed);
 	if (timeStarted > 0 && (timeoutInSec * 1000) < timePassed) {
 		clearInterval(updateInterval);
@@ -236,13 +205,13 @@ function updateStatus() {
 }
 
 function trySubmit(form_id, isIt4Save, currentAddr) {
-	//console.log('trySubmit(form_id:'+form_id+', isIt4Save:'+isIt4Save+', currentAddr:'+currentAddr+')');
+	//console.log('trySubmit(form_id:' + form_id + ', isIt4Save:' + isIt4Save + ', currentAddr:' + currentAddr + ')');
 	g_form_id = form_id;
 	if (!currentAddr)
 		currentAddr = '';
 	var operationName = eribOperations.item(form_id);
 	var temp_form_id = '';
-	//console.log('trySubmit: form_id:' + form_id + '\r\n' + 'currentAddr: ' + currentAddr + '\r\n'    + 'operationName' + operationName);
+	//console.log('trySubmit: form_id:' + form_id + '\r\n' + 'currentAddr: ' + currentAddr + '\r\n' + 'operationName: ' + operationName);
 	if (operationName === 'logon' && eribServerInfo.eribAddr.isEmpty()) {
 		eribServerInfo.eribAddr = eribAddress.get();
 		eribServerInfo.changed = Timer() + " :: " + operationName + " :: eribAddr";
@@ -250,41 +219,13 @@ function trySubmit(form_id, isIt4Save, currentAddr) {
 	}
 	if (operationName === 'multylogon.stage2' && eribEntity.host.isEmpty()) {
 		//console.log('eribEntity: clear');
-		eribEntity = {
-			host : '',
-			isDocument : false,
-			isConfirm : false,
-			isLogin : false,
-			checkAvailable : false,
-			templateAvailable : false,
-			autopayable : false,
-			show : function () {
-				return '';
-			},
-			getButtons : function () {
-				return '';
-			}
-		};
+		eribEntity = new erib_structure(emptyXML);
 		alert("Вы не можете выполнить запрос аутентификации по токену в указанном блоке.\r\nОтсутствует адрес блока.\r\nВыполните запрос 4.1.2!");
 		return;
 	}
 	if (operationName === 'logon' || operationName === 'multylogon.stage1') {
 		//console.log('eribEntity: clear');
-		eribEntity = {
-			host : '',
-			isDocument : false,
-			isConfirm : false,
-			isLogin : false,
-			checkAvailable : false,
-			templateAvailable : false,
-			autopayable : false,
-			show : function () {
-				return '';
-			},
-			getButtons : function () {
-				return '';
-			}
-		};
+		eribEntity = new erib_structure(emptyXML);
 		if (operationName === 'logon') {
 			eribServerInfo.csaAddrr = '';
 			eribServerInfo.changed = Timer() + "::" + operationName + ":: csaAddrr";
@@ -292,63 +233,26 @@ function trySubmit(form_id, isIt4Save, currentAddr) {
 		}
 		if (eribClientInfo.logedIn) {
 			//console.log('eribClientInfo: clear');
-			eribClientInfo = {
-				logedIn: false,
-				permissionsChecked: false,
-				name : "",
-				surName : "",
-				patrName : "",
-				product : {
-					id : -1
-				},
-				clientType : "",
-				clientRegion : {
-					id : -1,
-					name : "",
-					guid : "",
-					children : new productListObj()
-				},
-				atmRegion : {
-					id : -1,
-					name : "",
-					guid : "",
-					children : []
-				},
-				checkedUDBO : false,
-				agreementList : new productListObj(),
-				productsList : new productListObj(),
-				regularPaymentsList : new productListObj(),
-				permissionList : new dictionary(),
-				templatesList : new productListObj(),
-				loanOffersList : new productListObj(),
-				toString : function () {
-					return '';
-				}
-			};
+			eribClientInfo = new eribPerson();
 			temp_form_id = g_form_id;
 			trySubmit("4.1.6", true, eribServerInfo.eribAddr);
 			g_form_id = temp_form_id;
 			if (!currentAddr.isEmpty() && currentAddr !== eribServerInfo.eribAddr)
 				eribAddress.set(currentAddr);
-			//console.log('eribClientInfo: clear \r\n' + 'eribClientInfo.logedIn: ' + eribClientInfo.logedIn + '\r\n' + 'eribClientInfo.permissionsChecked: '+ eribClientInfo.permissionsChecked);
+			//console.log('eribClientInfo: clear \r\n' + 'eribClientInfo.logedIn: ' + eribClientInfo.logedIn + '\r\n' + 'eribClientInfo.permissionsChecked: ' + eribClientInfo.permissionsChecked);
 		}
-		if (operationName === 'multylogon.stage1' && !eribServerInfo.csaAddrr.isEmpty()) {
-			currentAddr = eribServerInfo.csaAddrr;
+		if (operationName === 'multylogon.stage1') {
+			if (!eribServerInfo.csaAddrr.isEmpty() && eribServerInfo.csaAddrr !== "---") {
+				currentAddr = eribServerInfo.csaAddrr;
+			} else {
+				currentAddr = eribServerInfo.eribAddr;
+				eribServerInfo.csaAddrr = eribServerInfo.eribAddr;
+			}
 			eribServerInfo.eribAddr = "";
 			eribServerInfo.changed = Timer() + "::" + operationName + ":: eribAddr";
 			//console.log('eribServerInfo: ' + eribServerInfo.changed);
 		}
 	}
-	if (eribClientInfo.logedIn && !eribClientInfo.permissionsChecked && (operationName !== 'permissions')) {
-		//console.log('Проверяем права доступа');
-		temp_form_id = g_form_id;
-		updateStatus();
-		trySubmit("4.13.0", true);
-		g_form_id = temp_form_id;
-		eribClientInfo.permissionsChecked = true;
-		//console.log('eribClientInfo: clear \r\n' + 'eribClientInfo.logedIn: ' + eribClientInfo.logedIn + '\r\n' + 'eribClientInfo.permissionsChecked: '+ eribClientInfo.permissionsChecked);
-	}
-	tempFileName = form_id + ".xml";
 	init_my_page();
 	clearInterval(updateInterval);
 	timeStarted = Timer();
@@ -361,7 +265,7 @@ function trySubmit(form_id, isIt4Save, currentAddr) {
 }
 
 function trySubmit_new(form_id, isIt4Save, currentAddr) {
-	//console.log('trySubmit_new(form_id:'+form_id+', isIt4Save:'+isIt4Save+', currentAddr:'+currentAddr+')');
+	//console.log('trySubmit_new(form_id:' + form_id + ', isIt4Save:' + isIt4Save + ', currentAddr:' + currentAddr + ')');
 	var operationName = eribOperations.item(form_id);
 	var async = true;
 	if (operationName === 'logoff') {
@@ -371,55 +275,9 @@ function trySubmit_new(form_id, isIt4Save, currentAddr) {
 		eribServerInfo.changed = Timer() + "::" + operationName + ":: eribAddr";
 		//console.log('eribServerInfo: ' + eribServerInfo.changed);
 		//console.log('eribEntity: clear');
-		eribEntity = {
-			host : '',
-			isDocument : false,
-			isConfirm : false,
-			isLogin : false,
-			checkAvailable : false,
-			templateAvailable : false,
-			autopayable : false,
-			show : function () {
-				return '';
-			},
-			getButtons : function () {
-				return '';
-			}
-		};
+		eribEntity = new erib_structure(emptyXML);
 		//console.log('eribClientInfo: clear');
-		eribClientInfo = {
-			logedIn: false,
-			permissionsChecked: false,
-			name : "",
-			surName : "",
-			patrName : "",
-			product : {
-				id : -1
-			},
-			clientType : "",
-			clientRegion : {
-				id : -1,
-				name : "",
-				guid : "",
-				children : new productListObj()
-			},
-			atmRegion : {
-				id : -1,
-				name : "",
-				guid : "",
-				children : []
-			},
-			checkedUDBO : false,
-			agreementList : new productListObj(),
-			productsList : new productListObj(),
-			regularPaymentsList : new productListObj(),
-			permissionList : new dictionary(),
-			templatesList : new productListObj(),
-			loanOffersList : new productListObj(),
-			toString : function () {
-				return '';
-			}
-		};
+		eribClientInfo = new eribPerson(); ;
 	}
 	if (operationName === 'multylogon.stage1') {
 		if (eribServerInfo.csaAddrr.isEmpty()) {
@@ -499,61 +357,67 @@ function trySubmit_new(form_id, isIt4Save, currentAddr) {
 }
 
 function HttpRequest(URL, FormData, typeData, requestType, isIt4Save, getJSON, async) {
-	//console.log('HttpRequest: URL: ' + URL + '\r\n' +    'FormData: ' + FormData + '\r\n' + 'typeData: ' + typeData + '\r\n' + 'requestType: ' + requestType + '\r\n' + 'isIt4Save: ' + isIt4Save + '\r\n' + 'getJSON: ' + getJSON + '\r\n' + 'async: ' + async);
+	//console.log('HttpRequest: URL: ' + URL + '\r\n' + 'FormData: ' + FormData + '\r\n' + 'typeData: ' + typeData + '\r\n' + 'requestType: ' + requestType + '\r\n' + 'isIt4Save: ' + isIt4Save + '\r\n' + 'getJSON: ' + getJSON + '\r\n' + 'async: ' + async);
 	init_my_page(true);
 	if (showAlerts && alertLevel >= 30)
 		alert("HttpRequest('" + URL + "," + FormData + "," + typeData + "," + requestType + "')");
 	var data;
 	var strTimeout = "";
+	var localHttp;
 	if (newhttp === undefined) {
 		newhttp = getXMLHttp();
 	}
+	if (async) {
+		localHttp = newhttp;
+	} else {
+		localHttp = getXMLHttp();
+	}
 	try { //Add event listener
-		if (getJSON) {//Запрос карт из ЕРИБ-статуса
+		if (getJSON) { //Запрос карт из ЕРИБ-статуса
 			if (XMLHttpRequest.prototype.addEventListener) {
-				newhttp.addEventListener("load", parseJSON, true);
+				localHttp.addEventListener("load", parseJSON, true);
 			} else {
-				if (newhttp.attachEvent) {
-					newhttp.attachEvent("onload", parseJSON);
+				if (localHttp.attachEvent) {
+					localHttp.attachEvent("onload", parseJSON);
 				} else {
 					//console.log('HttpRequest:: Не удалось выполнить addEventListener и attachEvent');
-					//newhttp.onload = function() {parseJSON(newhttp);};
+					//localHttp.onload = function() {parseJSON(localHttp);};
 					//async=false;
 				}
 			}
 		}
-		if (isIt4Save) {//Запрос к atmAPI
+		if (isIt4Save) { //Запрос к atmAPI
 			if (XMLHttpRequest.prototype.addEventListener) {
-				newhttp.addEventListener("load", parseAnswer, true);
+				localHttp.addEventListener("load", parseAnswer, true);
 			} else {
-				if (newhttp.attachEvent) {
-					newhttp.attachEvent("onload", parseAnswer);
+				if (localHttp.attachEvent) {
+					localHttp.attachEvent("onload", parseAnswer);
 				} else {
 					//console.log('HttpRequest:: Не удалось выполнить addEventListener и attachEvent');
-					//newhttp.onload = function() {parseAnswer(newhttp);};
+					//localHttp.onload = function() {parseAnswer(localHttp);};
 					//async=false;
 				}
 			}
 		}
 	} catch (err) {
-		warnText += err.description;
+		warnText += err.message;
 		//console.warn('HttpRequest: ' + warnText);
 	}
 	try { //Open XMLHttpRequest
-		newhttp.open(requestType, URL + '?' + Timer(), async);
+		localHttp.open(requestType, URL + '?' + Timer(), async);
 	} catch (e0) {
 		strTimeout = " Не удалось получить ответ от удаленного сервера\r\n" + e0.name + ":" + e0.message;
 		//console.warn('HttpRequest: ' + strTimeout);
 	}
-	newhttp.onreadystatechange = function () {
-		if (newhttp.readyState === 4) {
+	localHttp.onreadystatechange = function () {
+		if (localHttp.readyState === 4) {
 			clearInterval(updateInterval);
 			try { //Parse answer
-				var tmpStatus = newhttp.status;
+				var tmpStatus = localHttp.status;
 				if (getJSON)
-					parseJSON(newhttp);
+					parseJSON(localHttp);
 				if (isIt4Save)
-					parseAnswer(newhttp);
+					parseAnswer(localHttp);
 			} catch (err) {
 				strTimeout = " Не удалось получить ответ от удаленного сервера\r\n" + err.name + ":" + err.message;
 				//console.warn('HttpRequest: ' + strTimeout);
@@ -561,25 +425,25 @@ function HttpRequest(URL, FormData, typeData, requestType, isIt4Save, getJSON, a
 		}
 	};
 	try { //Set withCredentials
-		newhttp.withCredentials = true;
+		localHttp.withCredentials = true;
 	} catch (err) {
 		warnText += "\r\nНе удалось установить параметр withCredentials\r\n" + err.name + ":" + err.message + '\r\n';
 		//console.warn('HttpRequest: ' + warnText);
 	}
 	try { //Set msCaching
-		newhttp.msCaching = true;
+		localHttp.msCaching = true;
 	} catch (err) {
 		warnText += "\r\nНе удалось установить параметр msCaching\r\n" + err.name + ":" + err.message + '\r\n';
 		//console.warn('HttpRequest: ' + warnText);
 	}
 	try { //Set timeout
 		var timeoutInSec = parseInt(document.getElementById('timeOut').value, 10);
-		newhttp.timeout = (timeoutInSec * 1000);
-		newhttp.ontimeout = function () {
+		localHttp.timeout = (timeoutInSec * 1000);
+		localHttp.ontimeout = function () {
 			strTimeout = " Время ожидания ответа истекло!";
 			clearInterval(updateInterval);
 			Duration = Timer() - timeStarted;
-			newhttp.abort();
+			localHttp.abort();
 			data = {
 				status : 999,
 				responseText : "Не удалось установить соединение. " + strTimeout,
@@ -593,35 +457,35 @@ function HttpRequest(URL, FormData, typeData, requestType, isIt4Save, getJSON, a
 		//console.warn('HttpRequest: ' + warnText);
 	}
 	if (showAlerts && alertLevel >= 70)
-		alert("newhttp: " + newhttp.readyState);
+		alert("newhttp: " + localHttp.readyState);
 
-	newhttp.setRequestHeader("Cache-Control", "no-cache");
-	newhttp.setRequestHeader("Pragma", "no-cache");
-	newhttp.setRequestHeader("If-Modified-Since", "Sat, 1 Jan 2000 00:00:00 GMT");
+	localHttp.setRequestHeader("Cache-Control", "no-cache");
+	localHttp.setRequestHeader("Pragma", "no-cache");
+	localHttp.setRequestHeader("If-Modified-Since", "Sat, 1 Jan 2000 00:00:00 GMT");
 
 	switch (typeData) {
 	case "boundary":
-		newhttp.setRequestHeader("Content-Type", "multipart/form-data; boundary=" + boundary + "; charset=win1251");
+		localHttp.setRequestHeader("Content-Type", "multipart/form-data; boundary=" + boundary + "; charset=win1251");
 		break;
 	case "urlencoded":
-		newhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=win1251");
+		localHttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=win1251");
 		break;
 	case "soap":
-		newhttp.setRequestHeader("Content-Type", "text/xml; charset=win1251");
+		localHttp.setRequestHeader("Content-Type", "text/xml; charset=win1251");
 		break;
 	}
 	try { //Send data
 		reqSent = Timer(111);
-		newhttp.send(FormData);
+		localHttp.send(FormData);
 	} catch (e) {
-		strTimeout = " newhttp.send():\r\n" + e.name + ": " + e.message;
+		strTimeout = " localHttp.send():\r\n" + e.name + ": " + e.message;
 		//console.error('HttpRequest: ' + strTimeout);
 		showAlerts = false;
 	}
 }
 
 function textFromStatus(code) {
-	//console.log('textFromStatus(code:'+code+')');
+	//console.log('textFromStatus(code:' + code + ')');
 	switch (code) {
 	case -1:
 		return "Не смогли разобрать XML от ЕРИБа!!!";
@@ -678,13 +542,13 @@ function checkExactAmount(strTypeOfCharge) {
 			break;
 		}
 	} catch (error) {
-		//console.error('checkExactAmount(' + strTypeOfCharge + '): ' + error.description);
+		//console.error('checkExactAmount(' + strTypeOfCharge + '): ' + error.message);
 		//А тут нет selection!
 	}
 }
 
 function saveToFile(fileName) {
-	//console.log('saveToFile(fileName:'+fileName+')');
+	//console.log('saveToFile(fileName:' + fileName + ')');
 	init_my_page(true, true);
 	var extention = ".txt";
 	if (!fileName || fileName.isEmpty()) {
@@ -705,7 +569,7 @@ function saveToFile(fileName) {
 }
 
 function checkEmulator(parametersArray) {
-	//console.log('checkEmulator(parametersArray:'+parametersArray+')');
+	//console.log('checkEmulator(parametersArray:' + parametersArray + ')');
 	var bTransId = true;
 	var operation = getParam(parametersArray, "operation");
 	var pan = getParam(parametersArray, "pan");
@@ -799,12 +663,12 @@ function checkEmulator(parametersArray) {
 		parameters += "." + receiverSubType;
 	}
 	var result = encodeURIComponent(parameters);
-	//console.log('checkEmulator(): '+ result);
+	//console.log('checkEmulator(): ' + result);
 	return result;
 }
 
 function checkpostData(allDocumentFields) {
-	//console.log('checkpostData(allDocumentFields:'+allDocumentFields+')');
+	//console.log('checkpostData(allDocumentFields:' + allDocumentFields + ')');
 	var result = [];
 	var docfieldslength = allDocumentFields.length;
 	for (var currentDocField = 0; currentDocField < docfieldslength; currentDocField++) {
@@ -829,7 +693,7 @@ function checkpostData(allDocumentFields) {
 }
 
 function fillTheList(tagId, optionList, namedItem) {
-	//console.log('fillTheList(tagId:'+tagId+', optionList, namedItem:'+namedItem+')');
+	//console.log('fillTheList(tagId:' + tagId + ', optionList, namedItem:' + namedItem + ')');
 	if (!namedItem)
 		namedItem = "id";
 	try {
@@ -837,19 +701,19 @@ function fillTheList(tagId, optionList, namedItem) {
 			var newElement = document.createElement('input');
 			newElement.name = 'id';
 			newElement.value = ''
-			newElement.type = 'text';
+				newElement.type = 'text';
 			optionList = newElement;
 		}
 	} catch (err) {
-		//console.error('fillTheList('+tagId+', optionList, ' + namedItem + '): optionList не пустой');
+		//console.error('fillTheList(' + tagId + ', optionList, ' + namedItem + '): optionList не пустой');
 		try {
 			if (optionList.outerHTML.isEmpty())
 				optionList.outerHTML = "<input name='id' value='' type='text'/>";
 		} catch (err2) {
-			//console.error('fillTheList('+tagId+', optionList, ' + namedItem + '): ' + err2.description);
+			//console.error('fillTheList(' + tagId + ', optionList, ' + namedItem + '): ' + err2.message);
 			var newElement = document.createElement('input');
 			newElement.name = 'id';
-			newElement.value = ''
+			newElement.value = '';
 			newElement.type = 'text';
 			optionList = newElement;
 		}
@@ -869,7 +733,7 @@ function fillTheList(tagId, optionList, namedItem) {
 }
 
 function completePostData(addonPostData, currentPostdata) {
-	//console.log('completePostData(addonPostData:'+addonPostData+', currentPostdata:'+currentPostdata+')');
+	//console.log('completePostData(addonPostData:' + addonPostData + ', currentPostdata:' + currentPostdata + ')');
 	var addonLength = addonPostData.length;
 	for (var postParam = 0; postParam < addonLength; postParam++) {
 		var key = addonPostData[postParam].name;
@@ -895,7 +759,7 @@ function parseAnswer(result) {
 	Duration = Timer() - timeStarted;
 	if (!result)
 		result = this;
-	try {//remove EventListener
+	try { //remove EventListener
 		if (XMLHttpRequest.prototype.removeEventListener) {
 			result.removeEventListener("load", parseAnswer, true);
 		} else {
@@ -906,7 +770,7 @@ function parseAnswer(result) {
 			}
 		}
 	} catch (e) {
-		//console.error('parseAnswer: ' + e.description);
+		//console.error('parseAnswer: ' + e.message);
 	}
 	if (showAlerts && alertLevel >= 50)
 		alert(result.responseText);
@@ -923,13 +787,17 @@ function parseAnswer(result) {
 			eribEntity.requestName = requestName;
 			responseStatus = eribEntity.status.code();
 			if (eribEntity.isLogin && eribClientInfo.logedIn) {
-				eribClientInfo = eribEntity.person;
 				eribServerInfo.eribAddr = eribAddress.get();
 				eribServerInfo.changed = Timer() + "::" + requestName + ":: eribAddr";
 			}
+			if (eribClientInfo.logedIn && !eribClientInfo.permissionsChecked && requestName !== 'permissions') {
+				//updateStatus();
+				eribClientInfo.permissionsChecked = true;
+				trySubmit_new("4.13.0", true, '');
+			}
 		} catch (e) {
 			eribEntity.showResult = true;
-			//console.error ('parseAnswer(): ' + e.description);
+			//console.error('parseAnswer(): ' + e.message);
 			responseStatus = -1;
 		}
 	} else {
@@ -939,9 +807,9 @@ function parseAnswer(result) {
 
 	if (responseStatus !== -1 && responseStatus < 6) {
 		updatePermissions();
-		//console.error(eribEntity.person);
-		if (eribEntity.person.agreementList.length > 0 && !eribClientInfo.logedIn) {
-			var clientAgreements = eribEntity.person.agreementList;
+		//console.error(eribClientInfo);
+		if (eribClientInfo.agreementList.length > 0 && !eribClientInfo.logedIn) {
+			var clientAgreements = eribClientInfo.agreementList;
 			var productsCount = clientAgreements.length;
 			var newAgreementSelect = document.createElement('select');
 
@@ -1179,6 +1047,44 @@ function parseAnswer(result) {
 					fillTheList("4.9.5.3.2", template, 'template');
 				}
 			}
+			if (eribClientInfo.moneyBoxesList.length > 0) {
+				var clientMoneyBoxes = eribClientInfo.moneyBoxesList;
+				var productsCount = clientMoneyBoxes.length;
+				var mbSubscription = document.createElement('select');
+				var mbClaim = document.createElement('select');
+
+				var emptyoption0 = document.createElement('option');
+				emptyoption0.text = 'Пустое значение';
+				emptyoption0.value = '';
+				mbSubscription.add(emptyoption0);
+				var emptyoption1 = document.createElement('option');
+				emptyoption1.text = 'Пустое значение';
+				emptyoption1.value = '';
+				mbClaim.add(emptyoption1);
+
+				for (var i = 0; i < productsCount; i++) {
+					var currentProduct = clientMoneyBoxes[i];
+					var newoption = document.createElement('option');
+					newoption.text = currentProduct.status + '::' + currentProduct.name + ': ' + currentProduct.eventName + " [" + currentProduct.id + "]";
+					newoption.value = currentProduct.id;
+					switch (currentProduct.type) {
+					case "subscription":
+						mbSubscription.add(newoption);
+						break;
+					case "claim":
+						mbClaim.add(newoption);
+						break;
+					}
+				}
+
+				if (mbSubscription.options.length > 1) {
+					fillTheList("4.7.5.2", mbSubscription, 'linkId');
+					fillTheList("4.7.5.3", mbSubscription);
+				}
+				if (mbClaim.options.length > 1) {
+					fillTheList("4.7.5.2", mbClaim, 'claimId');
+				}
+			}
 		}
 		if (!eribEntity.isConfirm) {
 			try {
@@ -1217,7 +1123,7 @@ function parseAnswer(result) {
 										curObject = document.getElementById(curValue);
 								} catch (error) {
 									warnText += " Не удалось получить значение для элемента [" + replaceHTML(currentElement.outerHTML) + "].\r\n" + error.name + ": " + error.message + '\r\n';
-									//console.warn (warnText + '\r\n' + error.description);
+									//console.warn(warnText + '\r\n' + error.message);
 								}
 								finally {
 									try {
@@ -1225,7 +1131,7 @@ function parseAnswer(result) {
 											curObject.value = document.getElementById(formValue).value;
 									} catch (error) {
 										warnText += " Произошла ошибка при установке значения [" + replaceHTML(curObject.outerHTML) + "] для элемента [" + curValue + "]\r\n" + error.name + ": " + error.message + '\r\n';
-										//console.warn (warnText + '\r\n' + error.description);
+										//console.warn(warnText + '\r\n' + error.message);
 									}
 								}
 							}
@@ -1247,13 +1153,13 @@ function parseAnswer(result) {
 						try {
 							exec = selects[i].onclick();
 						} catch (e) {
-							//console.error (e.description);
+							//console.error(e.message);
 						}
 					}
 				}
 			} catch (er) {
 				errorText += 'Произошла ошибка\r\n' + er.name + ':' + er.message + '\r\n';
-				//console.error (errorText);
+				//console.error(errorText);
 			}
 		}
 	}
@@ -1261,12 +1167,16 @@ function parseAnswer(result) {
 	var showResult = eribEntity.showResult;
 	if (showResult === undefined)
 		showResult = true;
-	if (!showResult && requestName === 'permissions')
-		showResult = true;
-	updateStatus();
+	if (requestName === 'permissions' && !eribClientInfo.permissionsChecked) {
+		//Если клиент уже авторизовался, то запрос прав выполняется автоматически и показывать результат не нужно.
+		//Для не авторизованных клиентов вернется ошибка, которую необходимо отобразить
+		showResult = !eribClientInfo.logedIn;
+		eribClientInfo.permissionsChecked = true;
+	}
 	var erib_status = document.getElementById("erib_status");
-	//console.warn('showResult: ' + showResult + '\r\n' + tempXML);
+	//console.warn('showResult: ' + showResult + '\r\n' + result.responseText);
 	if (showResult) {
+		updateStatus();
 		tempXML = (xmlFormatter(result.responseText));
 		document.getElementById("resultTab").innerHTML = "<div><pre class='brush: xml;'>\n" + replaceHTML(tempXML) + "</pre></div>";
 		var style = 'border';
@@ -1325,143 +1235,143 @@ function parseAnswer(result) {
 			'\r\nАдрес сервера ЕРИБ: ' + psiURL +
 			'\r\nПараметры запроса: ' + reqParams +
 			'\r\nКлиент:' + eribClientInfo.toString();
-	}
-	if (forEmulator)
-		tempFileName = pathEmulator.replace(/\//g, "\\");
-	var erib_receipt = document.getElementById("erib_receipt");
-	if (erib_receipt) {
-		if (eribEntity.isReceiptDocument || eribEntity.isConfirm) {
-			erib_receipt.innerHTML = "<span id='closeit' class='closeit'>&#10006;</span><div class='receipt-content'><pre>" + eribEntity.show().innerHTML + "</pre></div>";
-			erib_receipt.style.display = 'block';
-			var close_receipt = document.getElementById('closeit');
-			close_receipt.onclick = function () {
+		if (forEmulator)
+			tempFileName = pathEmulator.replace(/\//g, "\\");
+		var erib_receipt = document.getElementById("erib_receipt");
+		if (erib_receipt) {
+			if (eribEntity.isReceiptDocument || eribEntity.isConfirm) {
+				erib_receipt.innerHTML = "<span id='closeit' class='closeit'>&#10006;</span><div class='receipt-content'><pre>" + eribEntity.show().innerHTML + "</pre></div>";
+				erib_receipt.style.display = 'block';
+				var close_receipt = document.getElementById('closeit');
+				close_receipt.onclick = function () {
+					erib_receipt.style.display = 'none';
+				}
+
+			} else {
+				erib_receipt.innerHTML = "";
 				erib_receipt.style.display = 'none';
 			}
-
-		} else {
-			erib_receipt.innerHTML = "";
-			erib_receipt.style.display = 'none';
 		}
-	}
 
-	var erib_debug = document.getElementById("erib_debug");
-	var eribshowerror = false;
-	if (erib_debug && alertLevel > 0) {
-		erib_debug.innerHTML = "<span id='closedebug' class='closeit'>&#10006;</span><div class='debug-content'>DEBUG info:<pre>" + eribEntity.show().innerHTML + "<br />" + errorText + "<br />" + replaceHTML(eribEntity.getButtons()) + "</pre></div>";
-		eribshowerror = true;
-	} else {
-		if (errorText !== '') {
-			errorText += '\r\n' + warnText;
-			erib_debug.innerHTML = "<span id='closedebug' class='closeit'>&#10006;</span><div class='debug-content'>debug info<pre>" + errorText + "</pre></div>";
+		var erib_debug = document.getElementById("erib_debug");
+		var eribshowerror = false;
+		if (erib_debug && alertLevel > 0) {
+			erib_debug.innerHTML = "<span id='closedebug' class='closeit'>&#10006;</span><div class='debug-content'>DEBUG info:<pre>" + eribEntity.show().innerHTML + "<br />" + errorText + "<br />" + replaceHTML(eribEntity.getButtons()) + "</pre></div>";
 			eribshowerror = true;
+		} else {
+			if (errorText !== '') {
+				errorText += '\r\n' + warnText;
+				erib_debug.innerHTML = "<span id='closedebug' class='closeit'>&#10006;</span><div class='debug-content'>debug info<pre>" + errorText + "</pre></div>";
+				eribshowerror = true;
+			}
 		}
-	}
-	if (eribshowerror) {
-		erib_debug.style.display = 'block';
-		close_debug = document.getElementById('closedebug');
-		close_debug.onclick = function () {
+		if (eribshowerror) {
+			erib_debug.style.display = 'block';
+			close_debug = document.getElementById('closedebug');
+			close_debug.onclick = function () {
+				erib_debug.style.display = 'none';
+			}
+		} else {
+			erib_debug.innerHTML = "";
 			erib_debug.style.display = 'none';
 		}
-	} else {
-		erib_debug.innerHTML = "";
-		erib_debug.style.display = 'none';
-	}
-	var updateNextStep = function (elementId, namedItem) {
-		var element = document.getElementById(elementId);
-		var children = getChildren(element.parentNode);
-		children[0].checked = true;
-		children[0].setAttribute('checked', true);
-		var itemName = namedItem | 'id';
-		if (eribEntity.documentId)
-			element.namedItem(itemName).value = eribEntity.documentId;
-		element.style.display = 'block';
-		return element;
-	}
-	if (eribEntity.isConfirm) {
-		var confirmOperation = updateNextStep("4.9.6.0");
-		//var confirmOperation = document.getElementById("4.9.6.0");
-		//getChildren(confirmOperation.parentNode)[0].checked = true;
-		//getChildren(confirmOperation.parentNode)[0].setAttribute('checked', true);
-		//confirmOperation.namedItem("id").value = eribEntity.documentId;
-		confirmOperation.namedItem("transactionToken").checked = true;
-		document.getElementById("4.9.6.0.transactionToken.value").value = eribEntity.transactionToken;
-		//confirmOperation.style.display = 'block';
-	}
-	if (eribEntity.checkAvailable) {
-		updateNextStep("4.9.11.0");
-		//var element = document.getElementById("4.9.11.0");
-		//getChildren(element.parentNode)[0].checked = true;
-		//getChildren(element.parentNode)[0].setAttribute('checked', true);
-		//element.namedItem("id").value = eribEntity.documentId;
-		//element.style.display = 'block';
-	}
-	if (eribEntity.templateAvailable) {
-		updateNextStep("4.9.5.4.1", "payment");
-		//var element = document.getElementById("4.9.5.4.1");
-		//getChildren(element.parentNode)[0].checked = true;
-		//getChildren(element.parentNode)[0].setAttribute('checked', true);
-		//element.namedItem("payment").value = eribEntity.documentId;
-		//element.style.display = 'block';
-	}
-	if (eribEntity.autopayable) {
-		updateNextStep("4.9.7.1.1");
-		//var element = document.getElementById("4.9.7.1.1");
-		//getChildren(element.parentNode)[0].checked = true;
-		//getChildren(element.parentNode)[0].setAttribute('checked', true);
-		//element.namedItem("id").value = eribEntity.documentId;
-		//element.style.display = 'block';
-	}
-	if (eribEntity.isLogin) {
-		switch (eribEntity.loginType) {
-		case 'chooseAgreement':
-			//var chooseAgreement = document.getElementById("4.1.4");
-			updateNextStep("4.1.4");
-			//var agreementBlockoperation = document.getElementById("4.1.4");
-			//getChildren(agreementBlockoperation.parentNode)[0].checked = true;
-			//getChildren(agreementBlockoperation.parentNode)[0].setAttribute('checked', true);
-			//agreementBlockoperation.style.display = 'block';
-			break;
-		case 'loginCSA':
-			var loginCSA = updateNextStep("4.1.3");
-			//var loginCSA = document.getElementById("4.1.3");
-			loginCSA.namedItem("token").value = eribEntity.token;
-			var newoption = document.createElement('option');
-			newoption.text = 'Адрес сервера из ответа CSA';
-			newoption.value = eribEntity.host;
-			newoption.selected = true;
-			serverList = eribAddress.options();
-			var optionsLength = 0;
-			if (serverList)
-				optionsLength = serverList.length;
-			var addOption = true;
-
-			for (var i = 0; i < optionsLength; i++) {
-				var currentOption = serverList[i];
-				if (currentOption.value.contains(newoption.value)) {
-					addOption = false;
-					currentOption.text = newoption.text;
-					currentOption.selected = true;
-				}
-			}
-			if (addOption) {
-				if (serverList) {
-					eribAddress.add(newoption);
-				} else {
-					eribAddress.set(eribEntity.host);
-				}
-			}
-			//getChildren(loginCSA.parentNode)[0].checked = true;
-			//getChildren(loginCSA.parentNode)[0].setAttribute('checked', true);
-			//loginCSA.style.display = 'block';
-			break;
+		var updateNextStep = function (elementId, namedItem) {
+			var element = document.getElementById(elementId);
+			var children = getChildren(element.parentNode);
+			children[0].checked = true;
+			children[0].setAttribute('checked', true);
+			var itemName = namedItem | 'id';
+			if (eribEntity.documentId)
+				element.namedItem(itemName).value = eribEntity.documentId;
+			element.style.display = 'block';
+			return element;
 		}
-	}
-	var divButtons = document.getElementById("buttons");
-	divButtons.appendChild(eribEntity.getButtons(true));
-	divButtons.style.zIndex = 1;
+		if (eribEntity.isConfirm) {
+			var confirmOperation = updateNextStep("4.9.6.0");
+			//var confirmOperation = document.getElementById("4.9.6.0");
+			//getChildren(confirmOperation.parentNode)[0].checked = true;
+			//getChildren(confirmOperation.parentNode)[0].setAttribute('checked', true);
+			//confirmOperation.namedItem("id").value = eribEntity.documentId;
+			confirmOperation.namedItem("transactionToken").checked = true;
+			document.getElementById("4.9.6.0.transactionToken.value").value = eribEntity.transactionToken;
+			//confirmOperation.style.display = 'block';
+		}
+		if (eribEntity.checkAvailable) {
+			updateNextStep("4.9.11.0");
+			//var element = document.getElementById("4.9.11.0");
+			//getChildren(element.parentNode)[0].checked = true;
+			//getChildren(element.parentNode)[0].setAttribute('checked', true);
+			//element.namedItem("id").value = eribEntity.documentId;
+			//element.style.display = 'block';
+		}
+		if (eribEntity.templateAvailable) {
+			updateNextStep("4.9.5.4.1", "payment");
+			//var element = document.getElementById("4.9.5.4.1");
+			//getChildren(element.parentNode)[0].checked = true;
+			//getChildren(element.parentNode)[0].setAttribute('checked', true);
+			//element.namedItem("payment").value = eribEntity.documentId;
+			//element.style.display = 'block';
+		}
+		if (eribEntity.autopayable) {
+			updateNextStep("4.9.7.1.1");
+			//var element = document.getElementById("4.9.7.1.1");
+			//getChildren(element.parentNode)[0].checked = true;
+			//getChildren(element.parentNode)[0].setAttribute('checked', true);
+			//element.namedItem("id").value = eribEntity.documentId;
+			//element.style.display = 'block';
+		}
+		if (eribEntity.isLogin) {
+			switch (eribEntity.loginType) {
+			case 'chooseAgreement':
+				//var chooseAgreement = document.getElementById("4.1.4");
+				updateNextStep("4.1.4");
+				//var agreementBlockoperation = document.getElementById("4.1.4");
+				//getChildren(agreementBlockoperation.parentNode)[0].checked = true;
+				//getChildren(agreementBlockoperation.parentNode)[0].setAttribute('checked', true);
+				//agreementBlockoperation.style.display = 'block';
+				break;
+			case 'loginCSA':
+				var loginCSA = updateNextStep("4.1.3");
+				//var loginCSA = document.getElementById("4.1.3");
+				loginCSA.namedItem("token").value = eribEntity.token;
+				var newoption = document.createElement('option');
+				newoption.text = 'Адрес сервера из ответа CSA';
+				newoption.value = eribEntity.host;
+				newoption.selected = true;
+				serverList = eribAddress.options();
+				var optionsLength = 0;
+				if (serverList)
+					optionsLength = serverList.length;
+				var addOption = true;
 
-	SyntaxHighlighter.highlight();
-	document.getElementById('currentServer').innerHTML = '<b>CSA:</b> <i>' + eribServerInfo.csaAddrr + '</i> &nbsp; &nbsp; &nbsp; <b>Node:</b>' + eribServerInfo.eribAddr
+				for (var i = 0; i < optionsLength; i++) {
+					var currentOption = serverList[i];
+					if (currentOption.value.contains(newoption.value)) {
+						addOption = false;
+						currentOption.text = newoption.text;
+						currentOption.selected = true;
+					}
+				}
+				if (addOption) {
+					if (optionsLength > 0) {
+						eribAddress.add(newoption);
+					} else {
+						eribAddress.set(eribEntity.host);
+					}
+				}
+				//getChildren(loginCSA.parentNode)[0].checked = true;
+				//getChildren(loginCSA.parentNode)[0].setAttribute('checked', true);
+				//loginCSA.style.display = 'block';
+				break;
+			}
+		}
+		var divButtons = document.getElementById("buttons");
+		divButtons.appendChild(eribEntity.getButtons(true));
+		divButtons.style.zIndex = 1;
+
+		SyntaxHighlighter.highlight();
+		document.getElementById('currentServer').innerHTML = '<b>CSA:</b> <i>' + eribServerInfo.csaAddrr + '</i> &nbsp; &nbsp; &nbsp; <b>Node:</b>' + eribServerInfo.eribAddr;
+	}
 }
 
 function parseJSON(result) {
@@ -1479,7 +1389,7 @@ function parseJSON(result) {
 			}
 		}
 	} catch (e) {
-		//console.error('parseJSON: ' + e.description);
+		//console.error('parseJSON: ' + e.message);
 	}
 
 	var cardsFromStatus = [],
