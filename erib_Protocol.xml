@@ -62,6 +62,7 @@ root:    Корневой элемент
 			</param>
 		</params>
 		<params>
+			<param  name="cardsAPI" type="hidden" text="" required="true" value="http://10.80.238.26:8118/erib-status/api/cards"/>
 			<param name="useStatus" value="true" text="Использовать карты из ERIB-Status" type="bool" required="true" />
 			<param name="mobileBank" value="true" text="МБ"  type="bool"  required="true"/>
 			<param name="way4" value="true" text="Way 4"  type="bool" required="true"/>

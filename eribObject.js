@@ -183,7 +183,7 @@ function erib_structure(xmlObject) {
 	}
 	if (this.isDocument) {
 		this.formName = form;
-		this.document = new document();
+		this.document = new document(xmlObject);
 	} else {
 		//Not a document means it might be a list
 		if (eribClientInfo.logedIn) {
@@ -896,16 +896,23 @@ function erib_structure(xmlObject) {
 		return result;
 	};
 
-	this.getButtons = function (isSave) {
+	this.getButtons = function (isSave, existButtons) {
 		//console.log('erib_structure: getButtons(isSave:'+isSave+')');
 		var span = window.document.createElement('span');
 		//var save2file = '';
+		if (existButtons) {
+			var existButtonslength = existButtons.length;
+			for (var i=existButtonslength;i>0;i--) {
+				if (existButtons[i-1].value !== 'Сохранить') {
+					span.appendChild(existButtons[i-1]);
+				}
+			}
+		}
 		var button = function (buttonText, op_id) {
 			var input = window.document.createElement('input');
 			input.type = 'button';
-			input.setNewAttribute('onclick', 'trySubmit(' + op_id + ');');
+			input.setNewAttribute('onclick', 'trySubmit.call(this,"' + op_id + '");');
 			input.setNewAttribute('value', buttonText);
-
 			return input;
 		};
 		if (checkAvailable) {

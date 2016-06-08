@@ -1,4 +1,4 @@
-var scriptVersion = "2.1.05";
+var scriptVersion = "2.1.06";
 var eribOperations = new dictionary();
 var alter2spec = new dictionary();
 var arrayOfrequests = [];
@@ -209,26 +209,29 @@ function createInput(param, type, req_id) {
 	spanTxt.appendChild(inpText);
 	var inpName = param.getAttribute('name');
 	if (req_id) {
-		spanTxt.setNewAttribute('name', inpName);
+		//spanTxt.setNewAttribute('name', inpName);
 		input.setNewAttribute('name', inpName);
 		spanTxt.setNewAttribute('class', 'description postdata');
 	} else {
-		spanTxt.setNewAttribute('id', inpName);
+		//spanTxt.setNewAttribute('id', inpName);
 		input.setNewAttribute('id', inpName);
 		classValue = 'settingsElement';
 		spanTxt.setNewAttribute('class', 'settingsElement');
 	}
-	input.type = 'text';
+	input.setNewAttribute('type', 'text');//.type = 'text';
 	input.setNewAttribute('value', inpValue);
-	spanTxt.setNewAttribute('id', inpName);
+	//spanTxt.setNewAttribute('id', inpName);
 
-	if (type == 'bool') {
-		input.type = 'checkbox';
+	if (type === 'bool') {
+		input.setNewAttribute('type', 'checkbox');//.type = 'checkbox';
 		classValue += ' ignore readonly';
 	}
 
-	if (type == 'read') {
+	if (type === 'read') {
 		classValue += ' readonly';
+	}
+	if (type==='hidden'){
+		input.setNewAttribute('type', 'hidden');//.type = 'hidden';
 	}
 	input.setNewAttribute('class', classValue);
 	//console.log('createInput(param [' + param.getAttribute('name') + '::' + param.getAttribute('text') + '])');
@@ -335,7 +338,7 @@ function fillDiv(curParam, req_id) {
 
 		pushInput[0].setAttribute('id', attrValue);
 		var optionalclass = pushInput[0].getAttribute('class');
-		optionalclass += " optionaldiv";
+		optionalclass = "optionaldiv";
 		pushInput[0].setAttribute('class', optionalclass);
 		pushInput[0].removeAttribute('name');
 		pushInput.unshift(optionalCheck);

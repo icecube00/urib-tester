@@ -46,7 +46,8 @@ function getCards() {
 			params.push('show="chooseAgreement"');
 		if (isCheckedBox('bankOffer'))
 			params.push('show="bankOffer"');
-		HttpRequest("http://10.80.238.26:8118/erib-status/api/cards", params.join("&"), "urlencoded", "POST", false, true, true);
+		cardsApi = document.getElementById('cardsAPI').value;
+		HttpRequest(cardsApi, params.join("&"), "urlencoded", "POST", false, true, true);
 	} catch (e) {
 		warnText += "Сервер проверки статуса ЕРИБ не доступен.\r\n";
 		//console.warn('getCards: Сервер проверки статуса ЕРИБ не доступен' + e.message);
@@ -156,15 +157,15 @@ function eribAddressConf() {
 function init_my_page(dontUpdate, isSave2File) {
 	//console.log('init_my_page(dontUpdate:' + dontUpdate + ', isSave2File:' + isSave2File + ')');
 	divChoice();
+	eribEntity = new erib_structure(emptyXML);
 	errorText = '';
 	showAlerts = isCheckedBox('showAlerts');
 	forEmulator = isCheckedBox('forEmulator');
 	showCatchedErr = isCheckedBox('showCatchedErr');
 	isSSL = isCheckedBox('isSSL');
 	alertLevel = document.getElementById('alertLevel').value;
-	document.getElementById("erib_debug").innerHTML = '';
-	if (!isSave2File)
-		document.getElementById("buttons").innerHTML = '';
+	document.getElementById("erib_debug").style.display = 'none';
+	document.getElementById("erib_receipt").style.display = 'none';
 	if (!dontUpdate) {
 		timePassed = 0;
 		document.getElementById("save2File").innerHTML = '';
@@ -189,9 +190,14 @@ function updateStatus() {
 	erib_status.style.color = '#000000';
 	timePassed = Timer() - timeStarted;
 	var statusSpan = document.createElement('span');
+	var statusBr = document.createElement('br');
+	var statusBold = document.createElement('b');
+	statusSpan.setNewAttribute('class','status');
+	statusSpan.appendChild(statusBr);
 	//console.log('updateStatus: timePassed:' + timePassed);
 	if (timeStarted > 0 && (timeoutInSec * 1000) < timePassed) {
 		clearInterval(updateInterval);
+		var statusText = document.createTextNode('Истекло время ожидания.');
 		erib_status.innerHTML = '<span class="status"><br /><b>Истекло время ожидания.</b></span>';
 	} else {
 		if (timeStarted > 0) {
@@ -200,11 +206,21 @@ function updateStatus() {
 			timePassed = 0;
 		}
 		var timeLeft = timeoutInSec - parseInt(timePassed / 1000, 10);
+		var statusText = document.createTextNode('Выполняется запрос. Подождите, пожалуйста...');
+		var timeLeftText = document.createTextNode('До истечения таймаута: ');
+		var timeLeftSec = document.createTextNode(timeLeft);
 		erib_status.innerHTML = '<span class="status"><br /><b>Выполняется запрос. Подождите, пожалуйста...</b><br />До истечения таймаута: <b>' + timeLeft + '</b> сек.</span>';
 	}
 }
 
 function trySubmit(form_id, isIt4Save, currentAddr) {
+	try {
+		if (this.type==='button'){
+			this.parentNode.removeChild(this);
+		}
+	}
+	catch(e){}
+
 	//console.log('trySubmit(form_id:' + form_id + ', isIt4Save:' + isIt4Save + ', currentAddr:' + currentAddr + ')');
 	g_form_id = form_id;
 	if (!currentAddr)
@@ -697,39 +713,34 @@ function fillTheList(tagId, optionList, namedItem) {
 	if (!namedItem)
 		namedItem = "id";
 	try {
-		if (optionList.isEmpty()) {
-			var newElement = document.createElement('input');
-			newElement.name = 'id';
-			newElement.value = ''
-				newElement.type = 'text';
-			optionList = newElement;
-		}
-	} catch (err) {
-		//console.error('fillTheList(' + tagId + ', optionList, ' + namedItem + '): optionList не пустой');
-		try {
-			if (optionList.outerHTML.isEmpty())
-				optionList.outerHTML = "<input name='id' value='' type='text'/>";
-		} catch (err2) {
-			//console.error('fillTheList(' + tagId + ', optionList, ' + namedItem + '): ' + err2.message);
+		if (optionList.options.length<2) {
 			var newElement = document.createElement('input');
 			newElement.name = 'id';
 			newElement.value = '';
 			newElement.type = 'text';
 			optionList = newElement;
 		}
+	} catch (err) {
+		//console.error('fillTheList(' + tagId + ', optionList, ' + namedItem + '): optionList не пустой');
+		var newElement = document.createElement('input');
+		newElement.setNewAttribute('name','id');
+		newElement.setNewAttribute('value','');
+		newElement.setNewAttribute('type','text');
+		optionList = newElement;
 	}
 	//var tempList = document.getElementById(tagId)
 	var cardsListInfo;
 	if (document.getElementById(tagId).namedItem(namedItem).type == 'checkbox') {
 		var tempId = document.getElementById(tagId).namedItem(namedItem).value;
 		cardsListInfo = document.getElementById(tempId);
-		optionList.id = tempId;
-		optionList.name = '';
+		optionList.setNewAttribute('id',tempId);
+		optionList.setNewAttribute('name','');
 	} else {
 		cardsListInfo = document.getElementById(tagId).namedItem(namedItem);
-		optionList.name = namedItem;
+		optionList.setNewAttribute('name',namedItem);
 	}
-	cardsListInfo.outerHTML = optionList.outerHTML;
+	if (cardsListInfo.outerHTML !== optionList.outerHTML)
+		cardsListInfo.outerHTML = optionList.outerHTML;
 }
 
 function completePostData(addonPostData, currentPostdata) {
@@ -777,6 +788,16 @@ function parseAnswer(result) {
 	var docXML;
 	var strValue = '';
 	var responseStatus = -1;
+	var htmlObject = function(name, value){
+		var b = window.document.createElement('b');
+		var i = window.document.createElement('i');
+		b.appendChild(window.document.createTextNode(name));
+		i.appendChild(window.document.createTextNode(value));
+		var span = window.document.createElement('span');
+		span.appendChild(b);
+		span.appendChild(i);
+		return span;
+	}
 
 	if (result.status === 200) {
 		docXML = getXMLObject(result);
@@ -1178,7 +1199,14 @@ function parseAnswer(result) {
 	if (showResult) {
 		updateStatus();
 		tempXML = (xmlFormatter(result.responseText));
-		document.getElementById("resultTab").innerHTML = "<div><pre class='brush: xml;'>\n" + replaceHTML(tempXML) + "</pre></div>";
+
+		var highlightedDIV = document.createElement('div');
+		var highlightedXML = document.createElement('pre');
+		highlightedXML.setNewAttribute('class','brush: xml;');
+		var formatedXML = document.createTextNode('\r\n' + tempXML);
+		highlightedXML.appendChild(formatedXML);
+		highlightedDIV.appendChild(highlightedXML);
+		document.getElementById("resultTab").appendClearChild(highlightedDIV);
 		var style = 'border';
 		erib_status.style.textAlign = '';
 		erib_status.style.backgroundColor = '';
@@ -1272,7 +1300,7 @@ function parseAnswer(result) {
 				erib_debug.style.display = 'none';
 			}
 		} else {
-			erib_debug.innerHTML = "";
+			erib_debug.innerHTML = '';
 			erib_debug.style.display = 'none';
 		}
 		var updateNextStep = function (elementId, namedItem) {
@@ -1366,11 +1394,24 @@ function parseAnswer(result) {
 			}
 		}
 		var divButtons = document.getElementById("buttons");
-		divButtons.appendChild(eribEntity.getButtons(true));
+		
+		var thereAreButtons = false;
+//		if (responseStatus !== -1 && responseStatus < 6){
+		try{
+			thereAreButtons = ((divButtons.firstChild.children.length > 1) && (['paymentsPrintCheck','createTemplategetTemplateName','paymentsLongofferMake','paymentsConfirm'].indexOf(eribEntity.requestName)!==-1));
+		} catch(e){}
+		if (thereAreButtons) {
+			divButtons.appendClearChild(eribEntity.getButtons(true,divButtons.firstChild.children));
+		} else {
+			divButtons.appendClearChild(eribEntity.getButtons(true));
+		}
 		divButtons.style.zIndex = 1;
+//		} else {
+//			divButtons.appendClearChild(null);
+//		}
 
 		SyntaxHighlighter.highlight();
-		document.getElementById('currentServer').innerHTML = '<b>CSA:</b> <i>' + eribServerInfo.csaAddrr + '</i> &nbsp; &nbsp; &nbsp; <b>Node:</b>' + eribServerInfo.eribAddr;
+		document.getElementById('currentServer').appendClearChild(htmlObject('CSA:',eribServerInfo.csaAddrr)).appendChild(htmlObject('&nbsp; &nbsp; &nbsp; Node:',eribServerInfo.eribAddr));
 	}
 }
 
@@ -1392,8 +1433,10 @@ function parseJSON(result) {
 		//console.error('parseJSON: ' + e.message);
 	}
 
-	var cardsFromStatus = [],
-	cardsHTML = '<input name="pan" value="" type="text" />';
+	var cardsFromStatus = [];
+	var cardsHTML = window.document.createElement('input');
+	cardsHTML.setNewAttribute('value','');
+	cardsHTML.setNewAttribute('type','text');
 	var cardsHF = new dictionary();
 	var cardsPSI = new dictionary();
 	var cardsALL = new dictionary();
@@ -1402,9 +1445,15 @@ function parseJSON(result) {
 	servers.add('HF', cardsHF);
 	servers.add('PSI', cardsPSI);
 	servers.add('ALL', cardsALL);
-
-	cardsFromStatus = eval(result.responseText);
-	erib_status.innerHTML = '<span class="status"></span>';
+	var cardsJSON = result.responseText;
+	try{
+	cardsFromStatus = JSON.parse(cardsJSON);
+	}
+	catch(err){
+		cardsFromStatus = eval(cardsJSON);
+	}
+	var clearNode = window.document.createTextNode('');
+	if (erib_status.firstChild) erib_status.firstChild.appendClearChild(clearNode);
 	cardsFromStatus.sort(
 		function (x, y) {
 		if (x.name < y.name)
@@ -1475,16 +1524,24 @@ function parseJSON(result) {
 	cards = servers.item('ALL');
 	//chekServers();
 	if (cards.key.length > 0) {
-		cardsHTML = '<select name="pan">\r\n';
+		cardsHTML = window.document.createElement('select');
 		for (var i = 0; i < cards.key.length; i++) {
-			cardsHTML += '\t<option value="' + cards.key[i] + '" />' + cards.key[i] + '\t' + cards.value[i] + '\r\n';
+			var cardOption = window.document.createElement('option');
+			var cardText = window.document.createTextNode(cards.key[i] + '\t' + cards.value[i]);
+			cardOption.setNewAttribute('value',cards.key[i]);
+			cardOption.appendChild(cardText);
+			cardsHTML.appendChild(cardOption);
 		}
-		cardsHTML += '</select>';
 	}
+	cardsHTML.setNewAttribute('name','pan');
 	var forms = document.getElementsByTagName("form");
 	for (var j = 0; j < forms.length; j++) {
 		if (forms[j].pan) {
-			forms[j].pan.outerHTML = cardsHTML;
+			//forms[j].replaceChild(cardsHTML,forms[j].pan);
+			/*var panNode = forms[j].pan;
+			forms[j].insertBefore(cardsHTML,panNode);
+			forms[j].removeChild(panNode);*/
+			forms[j].pan.outerHTML = cardsHTML.outerHTML;
 		}
 	}
 }
