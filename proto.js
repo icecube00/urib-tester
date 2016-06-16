@@ -584,6 +584,8 @@ function getElementsByClassName(htmlDocument, className) {
 	var result = [];
 	if (htmlDocument.getElementsByClassName)
 		return htmlDocument.getElementsByClassName(className);
+	if (htmlDocument.querySelectorAll)
+		return htmlDocument.querySelectorAll("." + className);
 
 	var tables = htmlDocument.getElementsByTagName("*");
 	for (var i = 0; i < tables.length; i++) {
