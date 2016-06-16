@@ -426,7 +426,16 @@ try { // Element prototypes
 				throw new TypeError('"Element.prototype.setNewAttribute" is NULL or not defined');
 			var newAttribute = window.document.createAttribute(attType);
 			newAttribute.value = attValue;
-			this.setAttributeNode(newAttribute);
+			try{
+				this.setAttributeNode(newAttribute);
+			}
+			catch(e){
+				try{
+					this.setAttribute(attType,attValue);
+				} catch(e0){
+					//this is weird
+				}
+			}
 		};
 		Element.prototype.setNewAttribute = setNewAttribute;
 	}
@@ -437,8 +446,13 @@ try { // Element prototypes
 			while (this.firstChild) {
 				this.removeChild(this.firstChild);
 			}
-			if (newChild)
-				this.appendChild(newChild);
+			if (newChild) {
+				try{
+					this.appendChild(newChild);
+				}catch(e){//IE8 sucks
+					this.innerHTML += newChild.outerHTML;
+				}
+			}
 		};
 		Element.prototype.appendClearChild = appendClearChild;
 	}
@@ -454,7 +468,7 @@ function getXMLObject(probablyXML, isText) {
 				if (window.DOMParser) { // all browsers, except IE before version 9
 					var parser = new DOMParser();
 					try {
-						result = parser.parseFromString(probablyXML, "text/xml");
+						result = parser.parseFromString(clearSymbolsLesserThanSpace(probablyXML), "text/xml");
 					} catch (parseErr) {
 						//console.error('Error parsing from string. ' + parseErr.message);
 					}
@@ -464,7 +478,7 @@ function getXMLObject(probablyXML, isText) {
 			} catch (e) {
 				result = CreateMSXMLDocumentObject();
 				result.async = false;
-				result.loadXML(probablyXML);
+				result.loadXML(clearSymbolsLesserThanSpace(probablyXML));
 			}
 			return result;
 		} else {
@@ -945,4 +959,17 @@ function CreateMSXMLDocumentObject() {
 		}
 	}
 	return;
+}
+
+function clearSymbolsLesserThanSpace(notClearString){
+		var stringArray = notClearString.split("");
+		var newArrayOfStrings=[];
+		var stringArraylength = stringArray.length;
+		for (var i=0;i<stringArraylength;i++){
+			if (stringArray[i].charCodeAt(0)<255){
+				newArrayOfStrings.push(stringArray[i]);
+			}
+		}
+		//notClearString = newArrayOfStrings.join();
+		return convert2win1251(newArrayOfStrings.join(""));
 }

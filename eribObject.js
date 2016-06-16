@@ -97,7 +97,7 @@ function erib_structure(xmlObject) {
 		tempNode_1.appendChild(tempNode_2);
 		tempNode_0.appendChild(tempNode_1);
 		statusNode.appendChild(tempNode_0);
-		statusObj = xmlObject.appendChild(statusNode);
+		statusObj = xmlObject.documentElement.appendChild(statusNode);
 	} else {
 		statusObj = xmlObject.getElementsByTagName("status")[0];
 	}
@@ -744,14 +744,33 @@ function erib_structure(xmlObject) {
 			var titleNode = window.document.createTextNode(half_add_2_40 + receiptTitle.toUpperCase() + '\r\n\r\n');
 			result.insertBefore(titleNode, result.firstChild);
 		}
-		if (isReceiptDocument || isConfirm)
+		if (isReceiptDocument || isConfirm) {
 			result.insertBefore(receiptNode, result.firstChild);
+			var newResult = function (oldResult) {
+				var final_res = {
+					innerHTML : ''
+				};
+				var oldResultLength = oldResult.childNodes.length;
+				for (var child = 0; child < oldResultLength; child++) {
+					final_res.innerHTML += oldResult.childNodes[child].nodeValue.split('\r\n').join('<br />');
+				}
+				return final_res;
+			}
+			try {
+				if (result.textContent.isEmpty()) {
+					return newResult(result);
+				}
+			} catch (e) {
+				return newResult(result);
+			}
+		}
 		return result;
 	};
 
 	function formFields(fieldsCollection, divId) {
 		//console.log('erib_structure: formFields(fieldsCollection:'+fieldsCollection+', divId:'+divId+')');
 		var result = '';
+		var errorFieldValue = localStatus.error.element()[0];
 		var returnspan = window.document.createElement('span');
 		var fieldslength = fieldsCollection.length;
 		for (var i = 0; i < fieldslength; i++) {
@@ -765,7 +784,7 @@ function erib_structure(xmlObject) {
 						sClass = 'invisible';
 					if (!field.editable && field.visible)
 						sClass = 'disabled';
-					if (localStatus.error.element()[0] === field.name) {
+					if (errorFieldValue === field.name) {
 						sClass = "error";
 					}
 					var docItems = field.items;
@@ -902,9 +921,9 @@ function erib_structure(xmlObject) {
 		//var save2file = '';
 		if (existButtons) {
 			var existButtonslength = existButtons.length;
-			for (var i=existButtonslength;i>0;i--) {
-				if (existButtons[i-1].value !== 'Сохранить') {
-					span.appendChild(existButtons[i-1]);
+			for (var i = existButtonslength; i > 0; i--) {
+				if (existButtons[i - 1].value !== 'Сохранить') {
+					span.appendChild(existButtons[i - 1]);
 				}
 			}
 		}
@@ -1005,7 +1024,7 @@ function erib_structure(xmlObject) {
 						}
 					}
 				}
-				console.log('fitTo40symbols(fname,fvalue): title: [' + title + ']\r\n delim: [' + delim + ']\r\nvalue: [' + value + ']');
+				//console.log('fitTo40symbols(fname,fvalue): title: [' + title + ']\r\n delim: [' + delim + ']\r\nvalue: [' + value + ']');
 				return title.toUpperCase() + delim + value.toUpperCase();
 			}
 			var fieldItems = this.items;

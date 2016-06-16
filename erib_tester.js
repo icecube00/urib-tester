@@ -6,6 +6,7 @@ var tempXML = '', tempREQ = '', tempFileName = '', text2save = '', reqParams = '
 var g_form_id = '';
 var requestName = '';
 var eribAddress;
+var opDictionary = new dictionary();
 var eribServerInfo = {
 	region : new productListObj(),
 	csaAddrr : "",
@@ -182,23 +183,32 @@ function updateStatus() {
 	erib_status.style.textAlign = 'center';
 	if (timePassed === 0)
 		erib_status.style.backgroundColor = 'rgb(255,255,255)';
-	var bgColor = erib_status.style.backgroundColor.split(',')[1];
-	var greenColor = parseInt(bgColor - step, 10);
+	var bgColor = erib_status.style.backgroundColor.split(',')[1]||0;
+	var greenColor = parseInt(bgColor - step, 10)||0;
 	if (greenColor < 0)
 		greenColor = 0;
 	erib_status.style.backgroundColor = 'rgb(255,' + greenColor + ',' + greenColor + ')';
 	erib_status.style.color = '#000000';
 	timePassed = Timer() - timeStarted;
+	var boldIt = function(textNode){
+		var elementBold = document.createElement('b');
+		try{
+			elementBold.appendChild(textNode);
+		} catch(e){
+			elementBold.innerHTML += textNode.outerHTML;
+		}
+		return elementBold;
+	}
 	var statusSpan = document.createElement('span');
-	var statusBr = document.createElement('br');
-	var statusBold = document.createElement('b');
+	var statusBr = function(){return document.createElement('br')};
 	statusSpan.setNewAttribute('class','status');
-	statusSpan.appendChild(statusBr);
+	statusSpan.appendChild(statusBr());
 	//console.log('updateStatus: timePassed:' + timePassed);
 	if (timeStarted > 0 && (timeoutInSec * 1000) < timePassed) {
 		clearInterval(updateInterval);
 		var statusText = document.createTextNode('Истекло время ожидания.');
-		erib_status.innerHTML = '<span class="status"><br /><b>Истекло время ожидания.</b></span>';
+		statusSpan.appendChild(boldIt(statusText));
+		//erib_status.innerHTML = '<span class="status"><br /><b>Истекло время ожидания.</b></span>';
 	} else {
 		if (timeStarted > 0) {
 			timePassed = Timer() - timeStarted;
@@ -207,10 +217,17 @@ function updateStatus() {
 		}
 		var timeLeft = timeoutInSec - parseInt(timePassed / 1000, 10);
 		var statusText = document.createTextNode('Выполняется запрос. Подождите, пожалуйста...');
-		var timeLeftText = document.createTextNode('До истечения таймаута: ');
+		statusSpan.appendChild(boldIt(statusText));
+		statusSpan.appendChild(statusBr());
+		var timeLeftText_0 = document.createTextNode('До истечения таймаута: ');
+		statusSpan.appendChild(timeLeftText_0);
 		var timeLeftSec = document.createTextNode(timeLeft);
-		erib_status.innerHTML = '<span class="status"><br /><b>Выполняется запрос. Подождите, пожалуйста...</b><br />До истечения таймаута: <b>' + timeLeft + '</b> сек.</span>';
+		statusSpan.appendChild(boldIt(timeLeftSec));
+		var timeLeftText_1 = document.createTextNode(' сек.');
+		statusSpan.appendChild(timeLeftText_1);
+		//erib_status.innerHTML = '<span class="status"><br /><b>Выполняется запрос. Подождите, пожалуйста...</b><br />До истечения таймаута: <b>' + timeLeft + '</b> сек.</span>';
 	}
+	erib_status.appendClearChild(statusSpan);
 }
 
 function trySubmit(form_id, isIt4Save, currentAddr) {
@@ -220,11 +237,15 @@ function trySubmit(form_id, isIt4Save, currentAddr) {
 		}
 	}
 	catch(e){}
-
 	//console.log('trySubmit(form_id:' + form_id + ', isIt4Save:' + isIt4Save + ', currentAddr:' + currentAddr + ')');
 	g_form_id = form_id;
 	if (!currentAddr)
 		currentAddr = '';
+/*	var operation = new erib_operation();
+	operation.name = eribOperations.item(form_id);
+	operation.id = form_id;
+	opDictionary.add(form_id, operation, true);
+*/
 	var operationName = eribOperations.item(form_id);
 	var temp_form_id = '';
 	//console.log('trySubmit: form_id:' + form_id + '\r\n' + 'currentAddr: ' + currentAddr + '\r\n' + 'operationName: ' + operationName);
@@ -269,21 +290,6 @@ function trySubmit(form_id, isIt4Save, currentAddr) {
 			//console.log('eribServerInfo: ' + eribServerInfo.changed);
 		}
 	}
-	init_my_page();
-	clearInterval(updateInterval);
-	timeStarted = Timer();
-	updateInterval = window.setInterval(function () {
-			updateStatus();
-		}, 1000);
-	setTimeout(function () {
-		trySubmit_new(form_id, isIt4Save, currentAddr);
-	}, 1000);
-}
-
-function trySubmit_new(form_id, isIt4Save, currentAddr) {
-	//console.log('trySubmit_new(form_id:' + form_id + ', isIt4Save:' + isIt4Save + ', currentAddr:' + currentAddr + ')');
-	var operationName = eribOperations.item(form_id);
-	var async = true;
 	if (operationName === 'logoff') {
 		async = false;
 		currentAddr = eribServerInfo.eribAddr;
@@ -302,16 +308,31 @@ function trySubmit_new(form_id, isIt4Save, currentAddr) {
 			//console.log('eribServerInfo: ' + eribServerInfo.changed);
 		}
 	}
+	if (operationName === 'multylogon.stage2') {
+		if (!eribServerInfo.eribAddr.isEmpty() && psiURL !== eribServerInfo.eribAddr)
+			return;
+	}
+	init_my_page();
+	clearInterval(updateInterval);
+	timeStarted = Timer();
+	updateInterval = window.setInterval(function () {
+			updateStatus();
+		}, 1000);
+	setTimeout(function () {
+		trySubmit_new(form_id, isIt4Save, currentAddr);
+	}, 1000);
+}
+
+function trySubmit_new(form_id, isIt4Save, currentAddr) {
+	//console.log('trySubmit_new(form_id:' + form_id + ', isIt4Save:' + isIt4Save + ', currentAddr:' + currentAddr + ')');
+	var operationName = eribOperations.item(form_id);
+	var async = true;
 	if (currentAddr.isEmpty()) {
 		psiURL = eribAddress.get();
 	} else {
 		psiURL = currentAddr;
 	}
 	//console.log('URL: ' + psiURL);
-	if (operationName === 'multylogon.stage2') {
-		if (!eribServerInfo.eribAddr.isEmpty() && psiURL !== eribServerInfo.eribAddr)
-			return;
-	}
 	if (showAlerts && alertLevel >= 80)
 		alert('ERIB URL: ' + psiURL);
 	if (psiURL === '---')
@@ -440,12 +461,12 @@ function HttpRequest(URL, FormData, typeData, requestType, isIt4Save, getJSON, a
 			}
 		}
 	};
-	try { //Set withCredentials
+	/*try { //Set withCredentials
 		localHttp.withCredentials = true;
 	} catch (err) {
 		warnText += "\r\nНе удалось установить параметр withCredentials\r\n" + err.name + ":" + err.message + '\r\n';
 		//console.warn('HttpRequest: ' + warnText);
-	}
+	}*/
 	try { //Set msCaching
 		localHttp.msCaching = true;
 	} catch (err) {
@@ -475,19 +496,19 @@ function HttpRequest(URL, FormData, typeData, requestType, isIt4Save, getJSON, a
 	if (showAlerts && alertLevel >= 70)
 		alert("newhttp: " + localHttp.readyState);
 
-	localHttp.setRequestHeader("Cache-Control", "no-cache");
-	localHttp.setRequestHeader("Pragma", "no-cache");
-	localHttp.setRequestHeader("If-Modified-Since", "Sat, 1 Jan 2000 00:00:00 GMT");
+	//localHttp.setRequestHeader("Cache-Control", "no-cache");
+	//localHttp.setRequestHeader("Pragma", "no-cache");
+	//localHttp.setRequestHeader("If-Modified-Since", "Sat, 1 Jan 2000 00:00:00 GMT");
 
 	switch (typeData) {
 	case "boundary":
-		localHttp.setRequestHeader("Content-Type", "multipart/form-data; boundary=" + boundary + "; charset=win1251");
+		localHttp.setRequestHeader("Content-Type", "multipart/form-data; boundary=" + boundary + "; charset=windows-1251");
 		break;
 	case "urlencoded":
-		localHttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=win1251");
+		localHttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=windows-1251");
 		break;
 	case "soap":
-		localHttp.setRequestHeader("Content-Type", "text/xml; charset=win1251");
+		localHttp.setRequestHeader("Content-Type", "text/xml; charset=windows-1251");
 		break;
 	}
 	try { //Send data
@@ -814,7 +835,9 @@ function parseAnswer(result) {
 			if (eribClientInfo.logedIn && !eribClientInfo.permissionsChecked && requestName !== 'permissions') {
 				//updateStatus();
 				eribClientInfo.permissionsChecked = true;
+				temp_form_id = g_form_id;
 				trySubmit_new("4.13.0", true, '');
+				g_form_id = temp_form_id;
 			}
 		} catch (e) {
 			eribEntity.showResult = true;
@@ -1203,9 +1226,21 @@ function parseAnswer(result) {
 		var highlightedDIV = document.createElement('div');
 		var highlightedXML = document.createElement('pre');
 		highlightedXML.setNewAttribute('class','brush: xml;');
-		var formatedXML = document.createTextNode('\r\n' + tempXML);
-		highlightedXML.appendChild(formatedXML);
 		highlightedDIV.appendChild(highlightedXML);
+		
+		var formatedXML = '\r\n' + tempXML;
+		try {
+			highlightedDIV.firstChild.appendChild(document.createTextNode(formatedXML));
+		}catch(e){
+			highlightedDIV.firstChild.innerText = formatedXML;
+		}
+/*
+		try {
+			highlightedDIV.appendChild(highlightedXML);
+		}catch(e){
+			highlightedDIV.innerHTML+=highlightedXML.outerHTML;
+		}
+	*/	
 		document.getElementById("resultTab").appendClearChild(highlightedDIV);
 		var style = 'border';
 		erib_status.style.textAlign = '';
@@ -1304,63 +1339,37 @@ function parseAnswer(result) {
 			erib_debug.style.display = 'none';
 		}
 		var updateNextStep = function (elementId, namedItem) {
+			var itemvalue=namedItem||'id';
 			var element = document.getElementById(elementId);
 			var children = getChildren(element.parentNode);
 			children[0].checked = true;
 			children[0].setAttribute('checked', true);
-			var itemName = namedItem | 'id';
 			if (eribEntity.documentId)
-				element.namedItem(itemName).value = eribEntity.documentId;
+				element.namedItem(itemvalue).value = eribEntity.documentId;
 			element.style.display = 'block';
 			return element;
 		}
 		if (eribEntity.isConfirm) {
-			var confirmOperation = updateNextStep("4.9.6.0");
-			//var confirmOperation = document.getElementById("4.9.6.0");
-			//getChildren(confirmOperation.parentNode)[0].checked = true;
-			//getChildren(confirmOperation.parentNode)[0].setAttribute('checked', true);
-			//confirmOperation.namedItem("id").value = eribEntity.documentId;
+			var confirmOperation = document.getElementById("4.9.6.0");
 			confirmOperation.namedItem("transactionToken").checked = true;
 			document.getElementById("4.9.6.0.transactionToken.value").value = eribEntity.transactionToken;
-			//confirmOperation.style.display = 'block';
 		}
 		if (eribEntity.checkAvailable) {
 			updateNextStep("4.9.11.0");
-			//var element = document.getElementById("4.9.11.0");
-			//getChildren(element.parentNode)[0].checked = true;
-			//getChildren(element.parentNode)[0].setAttribute('checked', true);
-			//element.namedItem("id").value = eribEntity.documentId;
-			//element.style.display = 'block';
 		}
 		if (eribEntity.templateAvailable) {
 			updateNextStep("4.9.5.4.1", "payment");
-			//var element = document.getElementById("4.9.5.4.1");
-			//getChildren(element.parentNode)[0].checked = true;
-			//getChildren(element.parentNode)[0].setAttribute('checked', true);
-			//element.namedItem("payment").value = eribEntity.documentId;
-			//element.style.display = 'block';
 		}
 		if (eribEntity.autopayable) {
 			updateNextStep("4.9.7.1.1");
-			//var element = document.getElementById("4.9.7.1.1");
-			//getChildren(element.parentNode)[0].checked = true;
-			//getChildren(element.parentNode)[0].setAttribute('checked', true);
-			//element.namedItem("id").value = eribEntity.documentId;
-			//element.style.display = 'block';
 		}
 		if (eribEntity.isLogin) {
 			switch (eribEntity.loginType) {
-			case 'chooseAgreement':
-				//var chooseAgreement = document.getElementById("4.1.4");
+			case 'chooseAgreement':				//var chooseAgreement = document.getElementById("4.1.4");
 				updateNextStep("4.1.4");
-				//var agreementBlockoperation = document.getElementById("4.1.4");
-				//getChildren(agreementBlockoperation.parentNode)[0].checked = true;
-				//getChildren(agreementBlockoperation.parentNode)[0].setAttribute('checked', true);
-				//agreementBlockoperation.style.display = 'block';
 				break;
 			case 'loginCSA':
 				var loginCSA = updateNextStep("4.1.3");
-				//var loginCSA = document.getElementById("4.1.3");
 				loginCSA.namedItem("token").value = eribEntity.token;
 				var newoption = document.createElement('option');
 				newoption.text = 'Адрес сервера из ответа CSA';
@@ -1387,16 +1396,12 @@ function parseAnswer(result) {
 						eribAddress.set(eribEntity.host);
 					}
 				}
-				//getChildren(loginCSA.parentNode)[0].checked = true;
-				//getChildren(loginCSA.parentNode)[0].setAttribute('checked', true);
-				//loginCSA.style.display = 'block';
 				break;
 			}
 		}
 		var divButtons = document.getElementById("buttons");
 		
 		var thereAreButtons = false;
-//		if (responseStatus !== -1 && responseStatus < 6){
 		try{
 			thereAreButtons = ((divButtons.firstChild.children.length > 1) && (['paymentsPrintCheck','createTemplategetTemplateName','paymentsLongofferMake','paymentsConfirm'].indexOf(eribEntity.requestName)!==-1));
 		} catch(e){}
@@ -1406,12 +1411,10 @@ function parseAnswer(result) {
 			divButtons.appendClearChild(eribEntity.getButtons(true));
 		}
 		divButtons.style.zIndex = 1;
-//		} else {
-//			divButtons.appendClearChild(null);
-//		}
 
 		SyntaxHighlighter.highlight();
-		document.getElementById('currentServer').appendClearChild(htmlObject('CSA:',eribServerInfo.csaAddrr)).appendChild(htmlObject('&nbsp; &nbsp; &nbsp; Node:',eribServerInfo.eribAddr));
+		document.getElementById('currentServer').appendClearChild(htmlObject('CSA:',eribServerInfo.csaAddrr));
+		document.getElementById('currentServer').appendChild(htmlObject('    Node:',eribServerInfo.eribAddr));
 	}
 }
 
@@ -1467,8 +1470,8 @@ function parseJSON(result) {
 		var allcards,
 		tmpCards,
 		currentServer = '';
-		currentServer = cardsFromStatus[i].server
-			.replace("<a href='http://b110-02:9080/CSAAdmin/login.do'>", "")
+		currentServer = cardsFromStatus[i].server.split("</a>")[0].split(">")[1]||
+			cardsFromStatus[i].server.replace("<a href='http://b110-02:9080/CSAAdmin/login.do'>", "")
 			.replace("<a href='http://10.68.5.238:9082/CSAAdmin/login.do'>", "")
 			.replace("</a><br /><a href='http://10.68.5.237:9082/CSAFront/index.do'>СБОЛ</a>", "")
 			.replace("</a><br /><a href='http://10.67.5.219:9080/CSAFront/index.do'>СБОЛ</a>", "");
