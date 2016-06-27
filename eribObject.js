@@ -779,13 +779,13 @@ function erib_structure(xmlObject) {
 			if (field.isShow) {
 				if (field.visible || field.required) {
 					if (field.required)
-						sClass = 'required';
+						sClass = 'erib-field required';
 					if (!field.visible)
-						sClass = 'invisible';
+						sClass = 'erib-field invisible';
 					if (!field.editable && field.visible)
-						sClass = 'disabled';
+						sClass = 'erib-field disabled';
 					if (errorFieldValue === field.name) {
-						sClass = "error";
+						sClass = "erib-field error";
 					}
 					var docItems = field.items;
 					var itemsLength = docItems.length;
@@ -952,7 +952,7 @@ function erib_structure(xmlObject) {
 				/*save2File.onclick = function () {
 				saveToFile(formId + '.xml')
 				};*/
-				save2File.setNewAttribute('class', 'save2File');
+				save2File.setNewAttribute('class', 'button save2File');
 			} catch (e) {
 				//console.error(e);
 			}
@@ -1361,4 +1361,17 @@ function eribRegion(srcXML) {
 	this.guid = getXmlValue(srcXML, "guid");
 	this.services = new productListObj();
 	this.children = new productListObj();
+}
+
+function eribLoanOffer(srcXML) {
+	//console.log('erib_structure: eribRegion(srcXML)');
+	this.loanid = getXmlValue(srcXML, "loanId");
+	this.offerid = getXmlValue(srcXML, "offerId");
+	this.id = (this.loanid+this.offerid);
+	this.name = getXmlValue(srcXML, "name");
+	this.maxLimit = new eribSum(srcXML, 'maxLimit');
+	this.firstYearPayment = new eribSum(srcXML, 'firstYearPayment');
+	this.nextYearPayment = new eribSum(srcXML, 'nextYearPayment');
+	this.termins = getXmlValue(srcXML, "terms");
+	this.interest = getXmlValue(srcXML, "offerInterestRate");
 }

@@ -4,35 +4,43 @@
 		<meta charset="UTF-8"/>
 		<meta http-equiv="cache-control" content="no-cache"/>
 		<title>Тестер</title>
-		<link href="highliter/shCore.css" rel="stylesheet" type="text/css"/>
-		<link href="highliter/shThemeDefault.css" rel="stylesheet" type="text/css"/>
 		<link href="erib_tester.css" rel="stylesheet" type="text/css"/>
 		<script type="text/javascript" src="proto.js"></script>
 		<script type="text/javascript" src="highliter/Blob.js"></script>
 		<script type="text/javascript" src="highliter/FileSaver.js"></script>
+		<!-- syntaxhighlighter v.3 ->
+		<link href="highliter/shCore.css" rel="stylesheet" type="text/css"/>
+		<link href="highliter/shThemeDefault.css" rel="stylesheet" type="text/css"/>
 		<script type="text/javascript" src="highliter/shCore-with-fix.js"></script>
 		<script type="text/javascript" src="highliter/shBrushXml.js"></script>
+		<!-- PRETTIFY -->
+		<link href="prettify/prettify.css" type="text/css" rel="stylesheet" />
+		<script type="text/javascript" src="prettify/prettify.js"></script>
+		<!-- -->
 		<script type="text/javascript" src="eribObject.js"></script>
 		<script type="text/javascript" src="erib_tester.js"></script>
 		<script type="text/javascript" src="loadXML.js"></script>
 	</head>
 	<body onload="loadXML();">
 		<h6 class="version" id="version" title="Проверялка протокола ЕРИБ"></h6>
-		<div onclick="toggleView()" id="switch" class="menu">
+		<div onclick="toggleView()" id="switch" class="toggle view">
 			<img id="configIcon" src="btn_settings_hot.png" alt="config"/>
 			<span id='currentServer'></span>
 		</div>
 		<div class="globalSettings" id="settings" style="display:none"></div>
-		<div onclick="toggleView('close')">
+		<div onclick="toggleView('close')" class="toggle">
 			<div class='menucontainer'>
 				<div class="menu section" id="menu">
-					<h2 class="wide">Список доступных операций</h2>
+					<h2>Список доступных операций</h2>
 					<div id='operations'></div>
 				</div>
 			</div>
 			<div name="operation status" class="border" id="erib_status" style="padding:0 0.5%;overflow-y:auto;width:59%;height:8%;position:fixed;top:0%;right:5px;"></div>
 			<div name="xml response" class="border" style="overflow-y:auto;width:60%;height:79%;position:fixed;top:9%;right:5px;">
-				<span id="resultTab"><pre class="brush: xml;"></pre></span>
+				<span id="resultTab">
+				<!--pre class="brush: xml;"></pre-->
+				<!--pre class="prettyprint linenums"></pre-->
+				</span>
 			</div>
 			<div name="dynamic buttons" class="border" id="buttons" style="width:60%;height:7%;position:fixed;top:89%;right:5px;"></div>
 			<div name="save button" id="save2File"></div>

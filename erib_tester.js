@@ -1,4 +1,5 @@
-﻿var Duration, reqSent;
+﻿//var SyntaxHighlighter = new syntaxhighlighter();
+var Duration, reqSent;
 var newhttp;
 var showAlerts, showCatchedErr, alertLevel, forEmulator, isSSL;
 var warnText = '', errorText = '', emulatorExt = "";
@@ -80,6 +81,7 @@ function toggleView(what2Do) {
 	var icon = document.getElementById('configIcon');
 	var innerTr = document.getElementById('settings');
 	var erib_debug = document.getElementById('erib_debug');
+	var erib_receipt = document.getElementById('erib_receipt');
 	if (!what2Do && innerTr)
 		what2Do = innerTr.style.display;
 	switch (what2Do) {
@@ -95,16 +97,20 @@ function toggleView(what2Do) {
 		}
 		if (erib_debug)
 			erib_debug.style.display = 'none';
-		if (innerTr)
-			innerTr.style.display = 'none';
-		icon.src = "btn_settings_pressed.png";
+		if (erib_receipt)
+			erib_receipt.style.display = 'none'
+				if (innerTr)
+					innerTr.style.display = 'none';
+				icon.src = "btn_settings_pressed.png";
 		break;
 	default:
 		if (erib_debug)
 			erib_debug.style.display = 'none';
-		if (innerTr)
-			innerTr.style.display = 'none';
-		icon.src = "btn_settings_pressed.png";
+		if (erib_receipt)
+			erib_receipt.style.display = 'none'
+				if (innerTr)
+					innerTr.style.display = 'none';
+				icon.src = "btn_settings_pressed.png";
 		break;
 	}
 }
@@ -183,25 +189,27 @@ function updateStatus() {
 	erib_status.style.textAlign = 'center';
 	if (timePassed === 0)
 		erib_status.style.backgroundColor = 'rgb(255,255,255)';
-	var bgColor = erib_status.style.backgroundColor.split(',')[1]||0;
-	var greenColor = parseInt(bgColor - step, 10)||0;
+	var bgColor = erib_status.style.backgroundColor.split(',')[1] || 0;
+	var greenColor = parseInt(bgColor - step, 10) || 0;
 	if (greenColor < 0)
 		greenColor = 0;
 	erib_status.style.backgroundColor = 'rgb(255,' + greenColor + ',' + greenColor + ')';
 	erib_status.style.color = '#000000';
 	timePassed = Timer() - timeStarted;
-	var boldIt = function(textNode){
+	var boldIt = function (textNode) {
 		var elementBold = document.createElement('b');
-		try{
+		try {
 			elementBold.appendChild(textNode);
-		} catch(e){
+		} catch (e) {
 			elementBold.innerHTML += textNode.outerHTML;
 		}
 		return elementBold;
 	}
 	var statusSpan = document.createElement('span');
-	var statusBr = function(){return document.createElement('br')};
-	statusSpan.setNewAttribute('class','status');
+	var statusBr = function () {
+		return document.createElement('br')
+	};
+	statusSpan.setNewAttribute('class', 'status');
 	statusSpan.appendChild(statusBr());
 	//console.log('updateStatus: timePassed:' + timePassed);
 	if (timeStarted > 0 && (timeoutInSec * 1000) < timePassed) {
@@ -232,42 +240,24 @@ function updateStatus() {
 
 function trySubmit(form_id, isIt4Save, currentAddr) {
 	try {
-		if (this.type==='button'){
+		if (this.type === 'button') {
 			this.parentNode.removeChild(this);
 		}
-	}
-	catch(e){}
+	} catch (e) {}
 	//console.log('trySubmit(form_id:' + form_id + ', isIt4Save:' + isIt4Save + ', currentAddr:' + currentAddr + ')');
 	g_form_id = form_id;
 	if (!currentAddr)
 		currentAddr = '';
-/*	var operation = new erib_operation();
-	operation.name = eribOperations.item(form_id);
-	operation.id = form_id;
-	opDictionary.add(form_id, operation, true);
-*/
 	var operationName = eribOperations.item(form_id);
 	var temp_form_id = '';
 	//console.log('trySubmit: form_id:' + form_id + '\r\n' + 'currentAddr: ' + currentAddr + '\r\n' + 'operationName: ' + operationName);
-	if (operationName === 'logon' && eribServerInfo.eribAddr.isEmpty()) {
-		eribServerInfo.eribAddr = eribAddress.get();
-		eribServerInfo.changed = Timer() + " :: " + operationName + " :: eribAddr";
+	if (operationName === 'logon') {
+		eribEntity = new erib_structure(emptyXML);
+		if (eribServerInfo.eribAddr.isEmpty())
+			eribServerInfo.eribAddr = eribAddress.get();
+		eribServerInfo.csaAddrr = '';
+		eribServerInfo.changed = Timer() + "::" + operationName + ":: csaAddrr='" + eribServerInfo.csaAddrr + "'\teribAddr='" + eribServerInfo.eribAddr + "'";
 		//console.log('eribServerInfo: ' + eribServerInfo.changed);
-	}
-	if (operationName === 'multylogon.stage2' && eribEntity.host.isEmpty()) {
-		//console.log('eribEntity: clear');
-		eribEntity = new erib_structure(emptyXML);
-		alert("Вы не можете выполнить запрос аутентификации по токену в указанном блоке.\r\nОтсутствует адрес блока.\r\nВыполните запрос 4.1.2!");
-		return;
-	}
-	if (operationName === 'logon' || operationName === 'multylogon.stage1') {
-		//console.log('eribEntity: clear');
-		eribEntity = new erib_structure(emptyXML);
-		if (operationName === 'logon') {
-			eribServerInfo.csaAddrr = '';
-			eribServerInfo.changed = Timer() + "::" + operationName + ":: csaAddrr";
-			//console.log('eribServerInfo: ' + eribServerInfo.changed);
-		}
 		if (eribClientInfo.logedIn) {
 			//console.log('eribClientInfo: clear');
 			eribClientInfo = new eribPerson();
@@ -278,16 +268,40 @@ function trySubmit(form_id, isIt4Save, currentAddr) {
 				eribAddress.set(currentAddr);
 			//console.log('eribClientInfo: clear \r\n' + 'eribClientInfo.logedIn: ' + eribClientInfo.logedIn + '\r\n' + 'eribClientInfo.permissionsChecked: ' + eribClientInfo.permissionsChecked);
 		}
-		if (operationName === 'multylogon.stage1') {
-			if (!eribServerInfo.csaAddrr.isEmpty() && eribServerInfo.csaAddrr !== "---") {
-				currentAddr = eribServerInfo.csaAddrr;
-			} else {
-				currentAddr = eribServerInfo.eribAddr;
-				eribServerInfo.csaAddrr = eribServerInfo.eribAddr;
-			}
-			eribServerInfo.eribAddr = "";
-			eribServerInfo.changed = Timer() + "::" + operationName + ":: eribAddr";
-			//console.log('eribServerInfo: ' + eribServerInfo.changed);
+	}
+	if (operationName === 'multylogon.stage1') {
+		//console.log('eribEntity: clear');
+		eribEntity = new erib_structure(emptyXML);
+		if (eribClientInfo.logedIn) {
+			//console.log('eribClientInfo: clear');
+			eribClientInfo = new eribPerson();
+			temp_form_id = g_form_id;
+			trySubmit("4.1.6", true, eribServerInfo.eribAddr);
+			g_form_id = temp_form_id;
+			if (!currentAddr.isEmpty() && currentAddr !== eribServerInfo.eribAddr)
+				eribAddress.set(currentAddr);
+			//console.log('eribClientInfo: clear \r\n' + 'eribClientInfo.logedIn: ' + eribClientInfo.logedIn + '\r\n' + 'eribClientInfo.permissionsChecked: ' + eribClientInfo.permissionsChecked);
+		}
+		if (eribServerInfo.csaAddrr.isEmpty()) {
+			eribServerInfo.csaAddrr = eribAddress.get();
+		} else if (eribServerInfo.csaAddrr === "---") {
+			currentAddr = eribServerInfo.eribAddr;
+			eribServerInfo.csaAddrr = eribServerInfo.eribAddr;
+		} else {
+			currentAddr = eribServerInfo.csaAddrr;
+		}
+		eribServerInfo.eribAddr = "";
+		eribServerInfo.changed = Timer() + "::" + operationName + ":: csaAddrr='" + eribServerInfo.csaAddrr + "'\teribAddr='" + eribServerInfo.eribAddr + "'";
+		//console.log('eribServerInfo: ' + eribServerInfo.changed);
+	}
+	if (operationName === 'multylogon.stage2') {
+		if (!eribServerInfo.eribAddr.isEmpty() && psiURL !== eribServerInfo.eribAddr)
+			return;
+		if (eribEntity.host.isEmpty()) {
+			//console.log('eribEntity: clear');
+			eribEntity = new erib_structure(emptyXML);
+			alert("Вы не можете выполнить запрос аутентификации по токену в указанном блоке.\r\nОтсутствует адрес блока.\r\nВыполните запрос 4.1.2!");
+			return;
 		}
 	}
 	if (operationName === 'logoff') {
@@ -300,17 +314,6 @@ function trySubmit(form_id, isIt4Save, currentAddr) {
 		eribEntity = new erib_structure(emptyXML);
 		//console.log('eribClientInfo: clear');
 		eribClientInfo = new eribPerson(); ;
-	}
-	if (operationName === 'multylogon.stage1') {
-		if (eribServerInfo.csaAddrr.isEmpty()) {
-			eribServerInfo.csaAddrr = eribAddress.get();
-			eribServerInfo.changed = Timer() + "::" + operationName + ":: csaAddrr";
-			//console.log('eribServerInfo: ' + eribServerInfo.changed);
-		}
-	}
-	if (operationName === 'multylogon.stage2') {
-		if (!eribServerInfo.eribAddr.isEmpty() && psiURL !== eribServerInfo.eribAddr)
-			return;
 	}
 	init_my_page();
 	clearInterval(updateInterval);
@@ -462,10 +465,10 @@ function HttpRequest(URL, FormData, typeData, requestType, isIt4Save, getJSON, a
 		}
 	};
 	/*try { //Set withCredentials
-		localHttp.withCredentials = true;
+	localHttp.withCredentials = true;
 	} catch (err) {
-		warnText += "\r\nНе удалось установить параметр withCredentials\r\n" + err.name + ":" + err.message + '\r\n';
-		//console.warn('HttpRequest: ' + warnText);
+	warnText += "\r\nНе удалось установить параметр withCredentials\r\n" + err.name + ":" + err.message + '\r\n';
+	//console.warn('HttpRequest: ' + warnText);
 	}*/
 	try { //Set msCaching
 		localHttp.msCaching = true;
@@ -661,45 +664,45 @@ function checkEmulator(parametersArray) {
 		id = depositId;
 	}
 
-	var parameters = "";
+	var parameters = [];
 	if (!operation.isEmpty()) {
-		parameters += "." + operation;
+		parameters.push(operation);
 	}
 	if (!transactionToken.isEmpty()) {
 		if (operation.contains("makeLongOffer")) {
 			bTransId = transactionToken.contains("special");
 		}
 		if (bTransId) {
-			parameters += "." + transactionToken;
+			parameters.push(transactionToken);
 		}
 	}
 	if (!form.isEmpty()) {
-		parameters += "." + form;
+		parameters.push(form);
 	}
 	if (!billing.isEmpty()) {
-		parameters += "." + billing;
+		parameters.push(billing);
 	}
 	if (id != null) {
 		if (!id.isEmpty()) {
-			parameters += "." + (id.split(" ")[0]);
+			parameters.push((id.split(" ")[0]));
 		}
 	}
 	if (!type.isEmpty()) {
-		parameters += "." + type;
+		parameters.push(type);
 	}
 	if (!pan.isEmpty()) {
-		parameters += "." + pan.slice(-1);
+		parameters.push(pan.slice(-1));
 	}
 	if (!csaToken.isEmpty()) {
-		parameters += "." + csaToken.slice(-1);
+		parameters.push(csaToken.slice(-1));
 	}
 	if (!agreementId.isEmpty()) {
-		parameters += "." + agreementId.slice(-1);
+		parameters.push(agreementId.slice(-1));
 	}
 	if (!receiverSubType.isEmpty()) {
-		parameters += "." + receiverSubType;
+		parameters.push(receiverSubType);
 	}
-	var result = encodeURIComponent(parameters);
+	var result = encodeURIComponent(parameters.join('.'));
 	//console.log('checkEmulator(): ' + result);
 	return result;
 }
@@ -734,7 +737,7 @@ function fillTheList(tagId, optionList, namedItem) {
 	if (!namedItem)
 		namedItem = "id";
 	try {
-		if (optionList.options.length<2) {
+		if (optionList.options.length < 2) {
 			var newElement = document.createElement('input');
 			newElement.name = 'id';
 			newElement.value = '';
@@ -744,9 +747,9 @@ function fillTheList(tagId, optionList, namedItem) {
 	} catch (err) {
 		//console.error('fillTheList(' + tagId + ', optionList, ' + namedItem + '): optionList не пустой');
 		var newElement = document.createElement('input');
-		newElement.setNewAttribute('name','id');
-		newElement.setNewAttribute('value','');
-		newElement.setNewAttribute('type','text');
+		newElement.setNewAttribute('name', 'id');
+		newElement.setNewAttribute('value', '');
+		newElement.setNewAttribute('type', 'text');
 		optionList = newElement;
 	}
 	//var tempList = document.getElementById(tagId)
@@ -754,11 +757,11 @@ function fillTheList(tagId, optionList, namedItem) {
 	if (document.getElementById(tagId).namedItem(namedItem).type == 'checkbox') {
 		var tempId = document.getElementById(tagId).namedItem(namedItem).value;
 		cardsListInfo = document.getElementById(tempId);
-		optionList.setNewAttribute('id',tempId);
-		optionList.setNewAttribute('name','');
+		optionList.setNewAttribute('id', tempId);
+		optionList.setNewAttribute('name', '');
 	} else {
 		cardsListInfo = document.getElementById(tagId).namedItem(namedItem);
-		optionList.setNewAttribute('name',namedItem);
+		optionList.setNewAttribute('name', namedItem);
 	}
 	if (cardsListInfo.outerHTML !== optionList.outerHTML)
 		cardsListInfo.outerHTML = optionList.outerHTML;
@@ -809,7 +812,7 @@ function parseAnswer(result) {
 	var docXML;
 	var strValue = '';
 	var responseStatus = -1;
-	var htmlObject = function(name, value){
+	var htmlObject = function (name, value) {
 		var b = window.document.createElement('b');
 		var i = window.document.createElement('i');
 		b.appendChild(window.document.createTextNode(name));
@@ -833,14 +836,14 @@ function parseAnswer(result) {
 				eribServerInfo.changed = Timer() + "::" + requestName + ":: eribAddr";
 			}
 			if (eribClientInfo.logedIn && !eribClientInfo.permissionsChecked && requestName !== 'permissions') {
-				//updateStatus();
 				eribClientInfo.permissionsChecked = true;
 				temp_form_id = g_form_id;
 				trySubmit_new("4.13.0", true, '');
 				g_form_id = temp_form_id;
 			}
-		} catch (e) {
+		} catch (er) {
 			eribEntity.showResult = true;
+			errorText += 'Произошла ошибка\r\n' + er.name + ':' + er.message + '\r\n';
 			//console.error('parseAnswer(): ' + e.message);
 			responseStatus = -1;
 		}
@@ -852,7 +855,7 @@ function parseAnswer(result) {
 	if (responseStatus !== -1 && responseStatus < 6) {
 		updatePermissions();
 		//console.error(eribClientInfo);
-		if (eribClientInfo.agreementList.length > 0 && !eribClientInfo.logedIn) {
+		if (eribClientInfo.agreementList.length > 0 && !eribClientInfo.logedIn) { //Список договоров УДБО
 			var clientAgreements = eribClientInfo.agreementList;
 			var productsCount = clientAgreements.length;
 			var newAgreementSelect = document.createElement('select');
@@ -873,7 +876,7 @@ function parseAnswer(result) {
 				fillTheList("4.1.4", newAgreementSelect, 'agreementId');
 			}
 		}
-		if (eribServerInfo.region && eribServerInfo.region.length > 0) {
+		if (eribServerInfo.region && eribServerInfo.region.length > 0) { //Список регионов - привязка к серверу
 			var serverRegions = eribServerInfo.region;
 			var regionsCount = serverRegions.length;
 			var newRegionsIDSelect = document.createElement('select');
@@ -911,7 +914,7 @@ function parseAnswer(result) {
 			}
 		}
 		if (eribClientInfo.logedIn) {
-			if (eribClientInfo.productsList.length > 0) {
+			if (eribClientInfo.productsList.length > 0) { //Список продуктов клиента
 				var clientProducts = eribClientInfo.productsList;
 				var productsCount = clientProducts.length;
 				var newCardsSelect = document.createElement('select');
@@ -985,7 +988,7 @@ function parseAnswer(result) {
 					fillTheList("4.5.2", newLoansSelect);
 				}
 			}
-			if (eribClientInfo.regularPaymentsList.length > 0) {
+			if (eribClientInfo.regularPaymentsList.length > 0) { // Список автоплатежей клиента
 				var clientRegularPayments = eribClientInfo.regularPaymentsList;
 				var productsCount = clientRegularPayments.length;
 				var autoPayment = document.createElement('select');
@@ -1064,7 +1067,7 @@ function parseAnswer(result) {
 					fillTheList("4.9.7.14.0", autoTransfer, "subscriptionId");
 				}
 			}
-			if (eribClientInfo.templatesList.length > 0) {
+			if (eribClientInfo.templatesList.length > 0) { //Список шаблонов клиента
 				var clientTemplates = eribClientInfo.templatesList;
 				var productsCount = clientTemplates.length;
 				var template = document.createElement('select');
@@ -1091,7 +1094,7 @@ function parseAnswer(result) {
 					fillTheList("4.9.5.3.2", template, 'template');
 				}
 			}
-			if (eribClientInfo.moneyBoxesList.length > 0) {
+			if (eribClientInfo.moneyBoxesList.length > 0) { //Список копилок клиента
 				var clientMoneyBoxes = eribClientInfo.moneyBoxesList;
 				var productsCount = clientMoneyBoxes.length;
 				var mbSubscription = document.createElement('select');
@@ -1134,9 +1137,10 @@ function parseAnswer(result) {
 			try {
 				var addonData = "";
 				if (responseStatus === 1) {
-					var id = parseInt(g_form_id.slice(-1), 10);
-					if (id > 1)
-						addonData = g_form_id.slice(0, (g_form_id.length - 1)) + (id - 1) + '.next';
+					addonData = g_form_id + '.prev';
+					//var id = parseInt(g_form_id.slice(-1), 10);
+					//if (id > 1)
+					//	addonData = g_form_id.slice(0, (g_form_id.length - 1)) + (id - 1) + '.next';
 				} else {
 					addonData = g_form_id + '.next';
 				}
@@ -1187,9 +1191,15 @@ function parseAnswer(result) {
 						var clearStep = document.getElementById(arr2Clear[i]);
 						if (clearStep.innerHTML)
 							clearStep.innerHTML = '';
+						clearStep.style.dispaly = 'none';
 					}
-					nextStep.appendChild(eribEntity.show(addonData));
-					//nextStep = curHTML;
+					var curHTML = eribEntity.show(addonData);
+					try {
+						nextStep.appendChild(curHTML);
+						nextStep.style.display = 'block';
+					}catch(err){
+						//console.warn(err.message);						
+					}
 					nextStep.style.zIndex = '1';
 					var selects = nextStep.getElementsByTagName("select");
 					for (var i = 0; i < selects.length; i++) {
@@ -1197,7 +1207,7 @@ function parseAnswer(result) {
 						try {
 							exec = selects[i].onclick();
 						} catch (e) {
-							//console.error(e.message);
+							//console.warn(e.message);
 						}
 					}
 				}
@@ -1222,26 +1232,35 @@ function parseAnswer(result) {
 	if (showResult) {
 		updateStatus();
 		tempXML = (xmlFormatter(result.responseText));
+		var resultTab = document.getElementById("resultTab");
+		while (resultTab.firstChild) {
+			resultTab.removeChild(resultTab.firstChild);
+		}
+		var highlightPRE = function(textXML,count){
+			if (!count) count=1;
+			//var highlightedDIV = document.createElement('div');
+			var highlightedXML = document.createElement('pre');
+			//highlightedXML.setNewAttribute('class', 'brush: xml; first-line:' + count);
+			highlightedXML.setNewAttribute('class', 'prettyprint linenums:' + count);
+			//highlightedDIV.appendChild(highlightedXML);
+			try {
+				highlightedXML.appendChild(document.createTextNode(textXML));
+			} catch (e) {
+				highlightedXML.innerText = textXML;
+			}
+			return highlightedXML;
+		}
+		var formatedXML = tempXML.split('\n');
+		var count = 1;
+		while (formatedXML.length){
+			var highlightedChunk = highlightPRE(formatedXML.splice(0,1000).join('\n'),count);
+			resultTab.appendChild(highlightedChunk);
+			count+=1000;
+		}
+		//SyntaxHighlighter.highlight();
+		prettyPrint();
 
-		var highlightedDIV = document.createElement('div');
-		var highlightedXML = document.createElement('pre');
-		highlightedXML.setNewAttribute('class','brush: xml;');
-		highlightedDIV.appendChild(highlightedXML);
-		
-		var formatedXML = '\r\n' + tempXML;
-		try {
-			highlightedDIV.firstChild.appendChild(document.createTextNode(formatedXML));
-		}catch(e){
-			highlightedDIV.firstChild.innerText = formatedXML;
-		}
-/*
-		try {
-			highlightedDIV.appendChild(highlightedXML);
-		}catch(e){
-			highlightedDIV.innerHTML+=highlightedXML.outerHTML;
-		}
-	*/	
-		document.getElementById("resultTab").appendClearChild(highlightedDIV);
+		//resultTab.appendChild(highlightedDIV);
 		var style = 'border';
 		erib_status.style.textAlign = '';
 		erib_status.style.backgroundColor = '';
@@ -1249,40 +1268,41 @@ function parseAnswer(result) {
 		var errTextifFatal = '';
 		switch (responseStatus) {
 		case -1:
-			erib_status.className = style + ' statusFatal';
-			style += ' statusFatal';
+			erib_status.className = style + ' status fatal';
+			style += ' status fatal';
 			errTextifFatal = errorText + '\r\n' + warnText;
 			break;
 		case 0:
-			erib_status.className = style + ' statusOk';
-			style += ' statusOk';
+			erib_status.className = style + ' status ok';
+			style += ' status ok';
 			break;
 		case 1:
-			erib_status.className = style + ' statusWrn';
-			style += ' statusWrn';
+			erib_status.className = style + ' status warn';
+			style += ' status warn';
 			break;
 		case 2:
-			erib_status.className = style + ' statusErr';
-			style += ' statusErr';
+			erib_status.className = style + ' status error';
+			style += ' status error';
 			break;
 		case 3:
-			erib_status.className = style + ' statusFatal';
-			style += ' statusFatal';
+			erib_status.className = style + ' status fatal';
+			style += ' status fatal';
 			break;
 		case 4:
-			erib_status.className = style + ' statusWrn';
-			style += ' statusWrn';
+			erib_status.className = style + ' status warn';
+			style += ' status warn';
 			break;
 		case 5:
-			erib_status.className = style + ' statusFatal';
-			style += ' statusFatal';
+			erib_status.className = style + ' status fatal';
+			style += ' status fatal';
 			break;
 		default:
-			erib_status.className = style + ' statusFatal';
-			style += ' statusFatal';
+			erib_status.className = style + ' status fatal';
+			style += ' status fatal';
 			break;
 		}
-		erib_status.innerHTML = "<span class='status " + style + "'> Статус ответа ЕРИБ: <b>" + responseStatus + "</b>: <i>" + textFromStatus(responseStatus) +
+		erib_status.innerHTML =
+			"<span class='status " + style + "'> Статус ответа ЕРИБ: <b>" + responseStatus + "</b>: <i>" + textFromStatus(responseStatus) +
 			"</i><br /> Время отправки запроса:<b> " + reqSent +
 			"</b><br /> Время обработки запроса сервером ЕРИБ:<b> " + Duration + " ms</b>" +
 			(errTextifFatal.length > 0 ? "<br />" + errTextifFatal : errTextifFatal) +
@@ -1339,7 +1359,7 @@ function parseAnswer(result) {
 			erib_debug.style.display = 'none';
 		}
 		var updateNextStep = function (elementId, namedItem) {
-			var itemvalue=namedItem||'id';
+			var itemvalue = namedItem || 'id';
 			var element = document.getElementById(elementId);
 			var children = getChildren(element.parentNode);
 			children[0].checked = true;
@@ -1365,7 +1385,7 @@ function parseAnswer(result) {
 		}
 		if (eribEntity.isLogin) {
 			switch (eribEntity.loginType) {
-			case 'chooseAgreement':				//var chooseAgreement = document.getElementById("4.1.4");
+			case 'chooseAgreement': //var chooseAgreement = document.getElementById("4.1.4");
 				updateNextStep("4.1.4");
 				break;
 			case 'loginCSA':
@@ -1400,21 +1420,27 @@ function parseAnswer(result) {
 			}
 		}
 		var divButtons = document.getElementById("buttons");
-		
+
 		var thereAreButtons = false;
-		try{
-			thereAreButtons = ((divButtons.firstChild.children.length > 1) && (['paymentsPrintCheck','createTemplategetTemplateName','paymentsLongofferMake','paymentsConfirm'].indexOf(eribEntity.requestName)!==-1));
-		} catch(e){}
+		try {
+			thereAreButtons = ((divButtons.firstChild.children.length > 1) && (['paymentsPrintCheck', 'createTemplategetTemplateName', 'paymentsLongofferMake', 'paymentsConfirm'].indexOf(eribEntity.requestName) !== -1));
+		} catch (e) {}
 		if (thereAreButtons) {
-			divButtons.appendClearChild(eribEntity.getButtons(true,divButtons.firstChild.children));
+			divButtons.appendClearChild(eribEntity.getButtons(true, divButtons.firstChild.children));
 		} else {
 			divButtons.appendClearChild(eribEntity.getButtons(true));
 		}
 		divButtons.style.zIndex = 1;
-
-		SyntaxHighlighter.highlight();
-		document.getElementById('currentServer').appendClearChild(htmlObject('CSA:',eribServerInfo.csaAddrr));
-		document.getElementById('currentServer').appendChild(htmlObject('    Node:',eribServerInfo.eribAddr));
+		prettyPrint();
+/*
+		try{
+			SyntaxHighlighter.highlight();
+		} catch(err){
+			errorText = err.message;
+		}
+*/
+		document.getElementById('currentServer').appendClearChild(htmlObject('CSA:', eribServerInfo.csaAddrr));
+		document.getElementById('currentServer').appendChild(htmlObject('    Node:', eribServerInfo.eribAddr));
 	}
 }
 
@@ -1438,8 +1464,8 @@ function parseJSON(result) {
 
 	var cardsFromStatus = [];
 	var cardsHTML = window.document.createElement('input');
-	cardsHTML.setNewAttribute('value','');
-	cardsHTML.setNewAttribute('type','text');
+	cardsHTML.setNewAttribute('value', '');
+	cardsHTML.setNewAttribute('type', 'text');
 	var cardsHF = new dictionary();
 	var cardsPSI = new dictionary();
 	var cardsALL = new dictionary();
@@ -1449,14 +1475,14 @@ function parseJSON(result) {
 	servers.add('PSI', cardsPSI);
 	servers.add('ALL', cardsALL);
 	var cardsJSON = result.responseText;
-	try{
-	cardsFromStatus = JSON.parse(cardsJSON);
-	}
-	catch(err){
+	try {
+		cardsFromStatus = JSON.parse(cardsJSON);
+	} catch (err) {
 		cardsFromStatus = eval(cardsJSON);
 	}
 	var clearNode = window.document.createTextNode('');
-	if (erib_status.firstChild) erib_status.firstChild.appendClearChild(clearNode);
+	if (erib_status.firstChild)
+		erib_status.firstChild.appendClearChild(clearNode);
 	cardsFromStatus.sort(
 		function (x, y) {
 		if (x.name < y.name)
@@ -1470,7 +1496,7 @@ function parseJSON(result) {
 		var allcards,
 		tmpCards,
 		currentServer = '';
-		currentServer = cardsFromStatus[i].server.split("</a>")[0].split(">")[1]||
+		currentServer = cardsFromStatus[i].server.split("</a>")[0].split(">")[1] ||
 			cardsFromStatus[i].server.replace("<a href='http://b110-02:9080/CSAAdmin/login.do'>", "")
 			.replace("<a href='http://10.68.5.238:9082/CSAAdmin/login.do'>", "")
 			.replace("</a><br /><a href='http://10.68.5.237:9082/CSAFront/index.do'>СБОЛ</a>", "")
@@ -1531,12 +1557,12 @@ function parseJSON(result) {
 		for (var i = 0; i < cards.key.length; i++) {
 			var cardOption = window.document.createElement('option');
 			var cardText = window.document.createTextNode(cards.key[i] + '\t' + cards.value[i]);
-			cardOption.setNewAttribute('value',cards.key[i]);
+			cardOption.setNewAttribute('value', cards.key[i]);
 			cardOption.appendChild(cardText);
 			cardsHTML.appendChild(cardOption);
 		}
 	}
-	cardsHTML.setNewAttribute('name','pan');
+	cardsHTML.setNewAttribute('name', 'pan');
 	var forms = document.getElementsByTagName("form");
 	for (var j = 0; j < forms.length; j++) {
 		if (forms[j].pan) {

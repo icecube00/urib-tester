@@ -164,7 +164,8 @@ try { // String prototypes
 			if (this === null) {
 				throw new TypeError('can\'t convert ' + this + ' to object');
 			}
-			var str = '' + this;
+			var str = [];
+			str.push(this);
 			count = +count;
 			if (count !== count) {
 				count = 0;
@@ -176,25 +177,25 @@ try { // String prototypes
 				throw new RangeError('repeat count must be less than infinity');
 			}
 			count = Math.floor(count);
-			if (str.length === 0 || count === 0) {
+			if (('' + this).length === 0 || count === 0) {
 				return '';
 			}
 			// Ensuring count is a 31-bit integer allows us to heavily optimize the
 			// main part. But anyway, most current (August 2014) browsers can't handle
 			// strings 1 << 28 chars or longer, so:
-			if (str.length * count >= 1 << 28) {
+			if (('' + this).length * count >= 1 << 28) {
 				throw new RangeError('repeat count must not overflow maximum string size');
 			}
 			var rpt = '';
 			for (; ; ) {
 				if ((count & 1) == 1) {
-					rpt += str;
+					return str.join('');
 				}
 				count >>>= 1;
 				if (count === 0) {
 					break;
 				}
-				str += str;
+				str.push(this);
 			}
 			// Could we try:
 			// return Array(count + 1).join(this);
@@ -329,7 +330,7 @@ try { // Element prototypes
 			var result = '';
 			for (var i = 0; i < childrenCount; i++) {
 				if (children[i].children.length > 0 && result === '')
-					result = children[i].namedItem(itemName);
+					result = children[i].namedItem(itemName)||'';
 				if (children[i].name === itemName)
 					return children[i];
 			}
@@ -426,13 +427,12 @@ try { // Element prototypes
 				throw new TypeError('"Element.prototype.setNewAttribute" is NULL or not defined');
 			var newAttribute = window.document.createAttribute(attType);
 			newAttribute.value = attValue;
-			try{
+			try {
 				this.setAttributeNode(newAttribute);
-			}
-			catch(e){
-				try{
-					this.setAttribute(attType,attValue);
-				} catch(e0){
+			} catch (e) {
+				try {
+					this.setAttribute(attType, attValue);
+				} catch (e0) {
 					//this is weird
 				}
 			}
@@ -447,9 +447,9 @@ try { // Element prototypes
 				this.removeChild(this.firstChild);
 			}
 			if (newChild) {
-				try{
+				try {
 					this.appendChild(newChild);
-				}catch(e){//IE8 sucks
+				} catch (e) { //IE8 sucks
 					this.innerHTML += newChild.outerHTML;
 				}
 			}
@@ -663,7 +663,7 @@ function xmlFormatter(xml) {
 	xml = xml.replace(/(>)\s*(<)(\/*)/g, '$1\n$2$3'); // удалить пробелы между тэгами (<tag>      </tag>), заменив их на символ \n, итоговый результат: >\n</
 	xml = xml.replace(/ *(.*) +\n/g, '$1\n'); // вставить символ \n после последовательности |      some text    \n|, итоговый результат: |      some text    \n\n|
 	xml = xml.replace(/(<.+>)(.+\n)/g, '$1\n$2'); // вставить символ \n между тэгом и текстом, итоговый результат: <tag>\nsome text\n
-	var formattedXML = '',
+	var formattedXML = [],
 	transitions = { // 4 типа тэгов: single, closing, opening, other (text, doctype, comment) -  всего 4*4 = 16 вариантов transitions
 		'single->single' : 0,
 		'single->closing' : -1,
@@ -711,12 +711,12 @@ function xmlFormatter(xml) {
 			padding += '  '; // 2 пробела можно заменить на Tab: padding += '\t';
 		}
 		if (fromTo === 'opening->closing') {
-			formattedXML = formattedXML.substr(0, formattedXML.length - 1) + ln + '\n'; // substr() удаляет разрыв строки (\n) оставшийся от предыдущего цикла
+			formattedXML.push(formattedXML.pop() + ln);
 		} else {
-			formattedXML += padding + ln + '\n';
+			formattedXML.push(padding + ln);
 		}
 	}
-	return formattedXML;
+	return formattedXML.join('\n');
 }
 
 function Timer(ms) {
@@ -963,15 +963,15 @@ function CreateMSXMLDocumentObject() {
 	return;
 }
 
-function clearSymbolsLesserThanSpace(notClearString){
-		var stringArray = notClearString.split("");
-		var newArrayOfStrings=[];
-		var stringArraylength = stringArray.length;
-		for (var i=0;i<stringArraylength;i++){
-			if (stringArray[i].charCodeAt(0)<255){
-				newArrayOfStrings.push(stringArray[i]);
-			}
+function clearSymbolsLesserThanSpace(notClearString) {
+	var stringArray = notClearString.split("");
+	var newArrayOfStrings = [];
+	var stringArraylength = stringArray.length;
+	for (var i = 0; i < stringArraylength; i++) {
+		if (stringArray[i].charCodeAt(0) < 255) {
+			newArrayOfStrings.push(stringArray[i]);
 		}
-		//notClearString = newArrayOfStrings.join();
-		return convert2win1251(newArrayOfStrings.join(""));
+	}
+	//notClearString = newArrayOfStrings.join();
+	return convert2win1251(newArrayOfStrings.join(""));
 }
