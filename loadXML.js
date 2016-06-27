@@ -1,4 +1,4 @@
-var scriptVersion = "2.1.07";
+var scriptVersion = "2.1.08";
 var eribOperations = new dictionary();
 var alter2spec = new dictionary();
 var arrayOfrequests = [];
