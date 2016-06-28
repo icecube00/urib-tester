@@ -122,8 +122,8 @@ function erib_structure(xmlObject) {
 	var isLogin = getXmlValue(xmlObject, "loginCompleted", true);
 
 	if (isLogin) {
-		eribClientInfo.logedIn = (getXmlValue(xmlObject, "loginCompleted") === 'true');
-		eribClientInfo.checkedUDBO = (getXmlValue(xmlObject, "checkedUDBO") === 'true');
+		eribClientInfo = new eribPerson(xmlObject, eribClientInfo); //.logedIn = (getXmlValue(xmlObject, "loginCompleted") === 'true');
+		//eribClientInfo.checkedUDBO = (getXmlValue(xmlObject, "checkedUDBO") === 'true');
 		var isChooseAgreement = getXmlValue(xmlObject, "chooseAgreementStage", true);
 		var isCSALogin = getXmlValue(xmlObject, "loginData", true);
 		this.host = getXmlValue(xmlObject, "host");
@@ -131,13 +131,6 @@ function erib_structure(xmlObject) {
 
 		if (isChooseAgreement) {
 			this.loginType = 'chooseAgreement';
-			var agreements = xmlObject.getElementsByTagName('agreement');
-			var agreementsLength = agreements.length;
-			for (var currentNode = 0; currentNode < agreementsLength; currentNode++) {
-				var product = new eribAgreement(agreements[currentNode]);
-				if (eribClientInfo.agreementList.indexOf(product) === -1)
-					eribClientInfo.agreementList.push(product);
-			}
 		}
 		if (isCSALogin) {
 			this.loginType = 'loginCSA';
@@ -1110,6 +1103,7 @@ function eribAgreement(srcXML) {
 
 function eribProduct(srcXML) {
 	//console.log('erib_structure: eribProduct(srcXML)');
+	var id='';
 	if (srcXML) {
 		var isCard = srcXML.tagName.contains("card");
 		var isAccount = srcXML.tagName.contains("account");
@@ -1118,7 +1112,7 @@ function eribProduct(srcXML) {
 		var isRegular = srcXML.tagName.contains("regularPayment");
 		var balanceAvailable = getXmlValue(srcXML, "availableLimit", true);
 		this.productType = srcXML.tagName;
-		this.id = getXmlValue(srcXML, "id");
+		id = getXmlValue(srcXML, "id");
 		this.name = getXmlValue(srcXML, "name");
 		this.state = getXmlValue(srcXML, "state");
 		this.number = getXmlValue(srcXML, "number");
@@ -1160,9 +1154,9 @@ function eribProduct(srcXML) {
 			this.closeDate = getXmlValue(srcXML, "closeDate");
 			this.agreementNumber = getXmlValue(srcXML, "agreementNumber");
 		}
-	} else {
-		this.id = -1;
 	}
+	if (id.isEmpty()) id = -1;
+	this.id = id;
 }
 
 function eribProvider(srcXML) {
@@ -1292,26 +1286,39 @@ function eribPermissions(srcXML) {
 	this.isAllowed = (getXmlValue(srcXML, "allowed") === 'true');
 }
 
-function eribPerson(srcXML) {
-	var card = [],
-	region = [],
-	atmRegion = [];
+function eribPerson(srcXML, oldPerson) {
+	var card = [], region = [], atmRegion = [], agreements = [];
+	var name = '', patrName = '', surName = '', clientType = '';
+	var logedIn = false, checkedUDBO = false;
 	//console.log('erib_structure: eribPerson(srcXML)');
-	this.logedIn = false;
-	this.permissionsChecked = false;
+	if (oldPerson){
+		for (var att in oldPerson) this[att] = oldPerson[att];
+	}
+	//person products & services
+	this.agreementList = this.agreementList||new productListObj();
+	this.loanOffersList = this.loanOffersList||new productListObj();
+	this.moneyBoxesList = this.moneyBoxesList||new productListObj();
+	this.permissionList = this.permissionList||new dictionary();
+	this.productsList = this.productsList||new productListObj();
+	this.regularPaymentsList = this.regularPaymentsList||new productListObj();
+	this.templatesList = this.templatesList||new productListObj();
 
-	this.name = getXmlValue(srcXML, "firstName");
-	this.surName = getXmlValue(srcXML, "surName");
-	this.patrName = getXmlValue(srcXML, "patrName");
 	if (srcXML) {
+		name = getXmlValue(srcXML, "firstName");
+		surName = getXmlValue(srcXML, "surName");
+		patrName = getXmlValue(srcXML, "patrName");
+		agreements = srcXML.getElementsByTagName('agreement');
 		card = srcXML.getElementsByTagName("card");
 		region = srcXML.getElementsByTagName("region");
 		atmRegion = srcXML.getElementsByTagName("atmRegion");
+		checkedUDBO = (getXmlValue(srcXML, "checkedUDBO") === 'true');
+		logedIn = (getXmlValue(srcXML, "loginCompleted") === 'true');
+		clientType = getXmlValue(srcXML, "creationType");
 	}
 	if (atmRegion.length > 0) {
 		this.atmRegion = new eribRegion(atmRegion[0]);
 	} else {
-		this.atmRegion = {
+		this.atmRegion = this.atmRegion||{
 			id : -1,
 			name : "",
 			guid : "",
@@ -1321,7 +1328,7 @@ function eribPerson(srcXML) {
 	if (region.length > 0) {
 		this.clientRegion = new eribRegion(region[0]);
 	} else {
-		this.clientRegion = {
+		this.clientRegion = this.clientRegion||{
 			id : -1,
 			name : "",
 			guid : "",
@@ -1331,20 +1338,29 @@ function eribPerson(srcXML) {
 	if (card.length > 0) {
 		this.product = new eribProduct(card[0]);
 	} else {
-		this.product = {
+		this.product = this.product||{
 			id : -1
 		}
 	}
-	this.clientType = getXmlValue(srcXML, "creationType");
-	this.checkedUDBO = (getXmlValue(srcXML, "checkedUDBO") === 'true');
-	this.agreementList = new productListObj();
-	this.loanOffersList = new productListObj();
-	this.moneyBoxesList = new productListObj();
-	this.permissionList = new dictionary();
-	this.productsList = new productListObj();
-	this.regularPaymentsList = new productListObj();
-	this.templatesList = new productListObj();
-	if (this.product.id !== -1)
+	if (agreements.length > 0) {
+		var agreementsLength = agreements.length;
+		for (var currentNode = 0; currentNode < agreementsLength; currentNode++) {
+			var newagreement = new eribAgreement(agreements[currentNode]);
+			if (this.agreementList.indexOf(newagreement) === -1)
+					this.agreementList.push(newagreement);
+		}
+	}
+	//boolean states
+	this.logedIn = this.logedIn||logedIn;
+	this.permissionsChecked = this.permissionsChecked||false;
+	this.checkedUDBO = this.checkedUDBO||checkedUDBO;
+	//person info
+	this.name = this.name||name;
+	this.patrName = this.patrName||patrName;
+	this.surName = this.surName||surName;
+	this.clientType = this.clientType||clientType;
+
+	if (this.product.id !== -1 && this.productsList.indexOf(this.product) === -1)
 		this.productsList.push(this.product);
 	this.toString = function () {
 		result = this.surName + " " + this.name + " " + this.patrName + "\r\n" +

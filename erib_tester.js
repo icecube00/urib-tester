@@ -1,5 +1,4 @@
-﻿//var SyntaxHighlighter = new syntaxhighlighter();
-var Duration, reqSent;
+﻿var Duration, reqSent;
 var newhttp;
 var showAlerts, showCatchedErr, alertLevel, forEmulator, isSSL;
 var warnText = '', errorText = '', emulatorExt = "";
@@ -1252,15 +1251,14 @@ function parseAnswer(result) {
 		}
 		var formatedXML = tempXML.split('\n');
 		var count = 1;
+		//cut the XML into chunks of 1000 line, this gives us a huge (~x5) performance gain
 		while (formatedXML.length){
 			var highlightedChunk = highlightPRE(formatedXML.splice(0,1000).join('\n'),count);
 			resultTab.appendChild(highlightedChunk);
 			count+=1000;
 		}
-		//SyntaxHighlighter.highlight();
 		prettyPrint();
 
-		//resultTab.appendChild(highlightedDIV);
 		var style = 'border';
 		erib_status.style.textAlign = '';
 		erib_status.style.backgroundColor = '';
@@ -1432,13 +1430,6 @@ function parseAnswer(result) {
 		}
 		divButtons.style.zIndex = 1;
 		prettyPrint();
-/*
-		try{
-			SyntaxHighlighter.highlight();
-		} catch(err){
-			errorText = err.message;
-		}
-*/
 		document.getElementById('currentServer').appendClearChild(htmlObject('CSA:', eribServerInfo.csaAddrr));
 		document.getElementById('currentServer').appendChild(htmlObject('    Node:', eribServerInfo.eribAddr));
 	}
